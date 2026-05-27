@@ -1,7 +1,0 @@
-{
-  "name": "aml-proxy",
-  "version": "1.0.0",
-  "main": "proxy.js",
-  "scripts": { "start": "node proxy.js" },
-  "dependencies": { "express": "^4.18.0" }
-}
