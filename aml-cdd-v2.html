@@ -1,0 +1,2114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AML·CDD Platform v2 — Live Sanctions Screening</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060a0f;--surface:#0c1018;--panel:#111820;--border:#1e2a36;--border2:#2a3a4a;
+  --text:#c8d8e8;--muted:#5a7a90;--dim:#3a5060;
+  --accent:#00c8ff;--green:#00e878;--red:#ff3850;--amber:#ffb020;--purple:#a060ff;
+  --font-mono:'IBM Plex Mono',monospace;--font:'IBM Plex Sans',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5;min-height:100vh;overflow-x:hidden}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,.012) 2px,rgba(0,200,255,.012) 4px);pointer-events:none;z-index:9999}
+
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.5rem;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:100}
+.logo{font-family:var(--font-mono);font-size:.9rem;font-weight:600;color:var(--accent);letter-spacing:.05em;display:flex;align-items:center;gap:.6rem}
+.logo-dot{width:8px;height:8px;background:var(--accent);border-radius:50%;box-shadow:0 0 8px var(--accent);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.header-meta{font-family:var(--font-mono);font-size:.62rem;color:var(--muted);letter-spacing:.07em;text-align:right;line-height:1.7}
+.header-meta span{color:var(--green)}
+
+/* LAYOUT */
+.shell{display:grid;grid-template-columns:210px 1fr;min-height:calc(100vh - 47px)}
+
+/* SIDEBAR */
+aside{background:var(--surface);border-right:1px solid var(--border);padding:.75rem 0;display:flex;flex-direction:column}
+.nav-sec{padding:.5rem 1rem .2rem;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--dim)}
+.nav-item{display:flex;align-items:center;gap:.6rem;padding:.55rem 1rem;cursor:pointer;border-left:2px solid transparent;transition:all .15s;font-size:.8rem;color:var(--muted)}
+.nav-item:hover{color:var(--text);background:rgba(0,200,255,.04);border-left-color:var(--border2)}
+.nav-item.active{color:var(--accent);background:rgba(0,200,255,.07);border-left-color:var(--accent)}
+.ico{width:14px;text-align:center;font-size:.75rem;flex-shrink:0}
+.nbadge{margin-left:auto;font-family:var(--font-mono);font-size:.58rem;padding:.1rem .3rem;border-radius:2px;background:var(--red);color:#fff}
+.nbadge.a{background:var(--amber);color:#000}
+.nbadge.g{background:var(--green);color:#000}
+
+/* MAIN */
+main{overflow-y:auto;height:calc(100vh - 47px)}
+.view{display:none;padding:1.4rem}
+.view.active{display:block;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* PAGE HDR */
+.ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;padding-bottom:.9rem;border-bottom:1px solid var(--border)}
+.pt{font-family:var(--font-mono);font-size:.92rem;font-weight:600;letter-spacing:.03em}
+.ps{font-size:.72rem;color:var(--muted);margin-top:.18rem}
+
+/* BTNS */
+.btn{font-family:var(--font-mono);font-size:.68rem;font-weight:500;letter-spacing:.05em;padding:.45rem .9rem;border:1px solid;border-radius:2px;cursor:pointer;transition:all .15s;text-transform:uppercase;display:inline-flex;align-items:center;gap:.4rem}
+.btn-p{background:var(--accent);color:#000;border-color:var(--accent)}
+.btn-p:hover{background:#00aadd;box-shadow:0 0 10px rgba(0,200,255,.25)}
+.btn-g{background:transparent;color:var(--muted);border-color:var(--border2)}
+.btn-g:hover{color:var(--text);border-color:var(--accent)}
+.btn-r{background:transparent;color:var(--red);border-color:var(--red)}
+.btn-r:hover{background:rgba(255,56,80,.08)}
+.btn-a{background:var(--amber);color:#000;border-color:var(--amber)}
+.btn-sm{padding:.28rem .6rem;font-size:.62rem}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem;margin-bottom:1.25rem}
+.sc{background:var(--panel);border:1px solid var(--border);padding:.9rem;position:relative;overflow:hidden}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.sc.b::before{background:var(--accent)}.sc.g::before{background:var(--green)}.sc.r::before{background:var(--red)}.sc.a::before{background:var(--amber)}
+.sn{font-family:var(--font-mono);font-size:1.8rem;font-weight:600;line-height:1}
+.sn.b{color:var(--accent)}.sn.g{color:var(--green)}.sn.r{color:var(--red)}.sn.a{color:var(--amber)}
+.sl{font-family:var(--font-mono);font-size:.58rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:.3rem}
+
+/* CARD */
+.card{background:var(--panel);border:1px solid var(--border);padding:1.1rem;margin-bottom:.9rem}
+.ct{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:.9rem;display:flex;align-items:center;gap:.45rem}
+.ct::before{content:'';width:2px;height:11px;background:var(--accent)}
+
+/* TABLE */
+.tw{background:var(--panel);border:1px solid var(--border);overflow-x:auto;margin-bottom:1rem}
+.tb{display:flex;justify-content:space-between;align-items:center;padding:.65rem 1rem;border-bottom:1px solid var(--border);gap:.75rem;flex-wrap:wrap}
+.tsearch{background:var(--bg);border:1px solid var(--border2);color:var(--text);font-family:var(--font-mono);font-size:.72rem;padding:.38rem .7rem;width:200px;border-radius:2px;outline:none}
+.tsearch:focus{border-color:var(--accent)}
+table{width:100%;border-collapse:collapse}
+th{font-family:var(--font-mono);font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);padding:.55rem 1rem;text-align:left;border-bottom:1px solid var(--border);background:var(--surface);white-space:nowrap}
+td{padding:.6rem 1rem;border-bottom:1px solid var(--border);font-size:.78rem;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(0,200,255,.025)}
+.mono{font-family:var(--font-mono)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:.25rem;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.07em;text-transform:uppercase;padding:.18rem .45rem;border-radius:2px;font-weight:500}
+.bp{background:rgba(0,232,120,.1);color:var(--green);border:1px solid rgba(0,232,120,.2)}
+.bf{background:rgba(255,56,80,.1);color:var(--red);border:1px solid rgba(255,56,80,.2)}
+.be{background:rgba(255,176,32,.1);color:var(--amber);border:1px solid rgba(255,176,32,.2)}
+.bn{background:rgba(90,122,144,.1);color:var(--muted);border:1px solid var(--border2)}
+.bl{background:rgba(0,232,120,.07);color:var(--green)}
+.bm{background:rgba(255,176,32,.07);color:var(--amber)}
+.bh{background:rgba(255,56,80,.07);color:var(--red)}
+.bd::before{content:'';width:4px;height:4px;border-radius:50%;background:currentColor}
+
+/* RISK BAR */
+.rb{height:3px;background:var(--border);border-radius:2px;overflow:hidden;min-width:70px}
+.rf{height:100%;border-radius:2px;transition:width .4s}
+
+/* FORM */
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:.9rem}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.9rem}
+.fg{display:flex;flex-direction:column;gap:.3rem}
+.fg.full{grid-column:1/-1}
+label{font-family:var(--font-mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+input,select,textarea{background:var(--bg);border:1px solid var(--border2);color:var(--text);font-family:var(--font);font-size:.8rem;padding:.5rem .75rem;border-radius:2px;outline:none;transition:border-color .15s;appearance:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,200,255,.07)}
+textarea{resize:vertical;min-height:68px;font-family:var(--font-mono);font-size:.72rem}
+.sdiv{grid-column:1/-1;border-top:1px solid var(--border);padding-top:.9rem;margin-top:.3rem;font-family:var(--font-mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+
+/* SANCTIONS LIVE PANEL */
+.sanctions-panel{background:var(--bg);border:1px solid var(--border2);padding:1rem;margin-bottom:1rem}
+.sp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem}
+.sp-title{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text)}
+.sp-status{font-family:var(--font-mono);font-size:.62rem;color:var(--muted);display:flex;align-items:center;gap:.4rem}
+.sp-spinner{width:8px;height:8px;border:1.5px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:none}
+.sp-spinner.active{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sp-sources{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem}
+.sp-src{font-family:var(--font-mono);font-size:.6rem;padding:.2rem .5rem;border:1px solid;border-radius:2px;cursor:pointer;transition:all .15s}
+.sp-src.ofac{border-color:rgba(255,56,80,.3);color:var(--red)}
+.sp-src.ofac.active{background:rgba(255,56,80,.15);border-color:var(--red)}
+.sp-src.un{border-color:rgba(0,200,255,.3);color:var(--accent)}
+.sp-src.un.active{background:rgba(0,200,255,.15);border-color:var(--accent)}
+.sp-src.eu{border-color:rgba(160,96,255,.3);color:var(--purple)}
+.sp-src.eu.active{background:rgba(160,96,255,.15);border-color:var(--purple)}
+.sp-src.mas{border-color:rgba(255,176,32,.3);color:var(--amber)}
+.sp-src.mas.active{background:rgba(255,176,32,.15);border-color:var(--amber)}
+
+/* MATCH CARD */
+.match-card{padding:.75rem;border:1px solid;border-radius:2px;margin-bottom:.5rem}
+.match-card.hit{border-color:rgba(255,56,80,.4);background:rgba(255,56,80,.05)}
+.match-card.potential{border-color:rgba(255,176,32,.3);background:rgba(255,176,32,.04)}
+.match-card.clear{border-color:rgba(0,232,120,.25);background:rgba(0,232,120,.04)}
+.match-name{font-family:var(--font-mono);font-size:.78rem;font-weight:600;margin-bottom:.3rem}
+.match-name.hit{color:var(--red)}
+.match-name.potential{color:var(--amber)}
+.match-name.clear{color:var(--green)}
+.match-meta{display:flex;flex-wrap:wrap;gap:.5rem;font-family:var(--font-mono);font-size:.6rem;color:var(--muted)}
+.match-tag{padding:.1rem .4rem;border:1px solid var(--border2);border-radius:2px}
+
+/* RISK CIRCLE */
+.rc-wrap{display:flex;align-items:center;gap:1.25rem;padding:1.1rem;background:var(--bg);border:1px solid var(--border);margin-bottom:.9rem}
+.rc{width:66px;height:66px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid;flex-shrink:0}
+.rc.low{border-color:var(--green);background:rgba(0,232,120,.06)}
+.rc.medium{border-color:var(--amber);background:rgba(255,176,32,.06)}
+.rc.high{border-color:var(--red);background:rgba(255,56,80,.06);animation:rp 2s infinite}
+.rc .rscore{font-family:var(--font-mono);font-size:1.2rem;font-weight:600;line-height:1}
+.rc.low .rscore{color:var(--green)}.rc.medium .rscore{color:var(--amber)}.rc.high .rscore{color:var(--red)}
+.rc .rlabel{font-family:var(--font-mono);font-size:.48rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+@keyframes rp{0%,100%{box-shadow:0 0 0 0 rgba(255,56,80,.3)}50%{box-shadow:0 0 0 7px rgba(255,56,80,0)}}
+
+/* CDD RESULT BOX */
+.cdd-box{padding:1.1rem;border:1px solid;border-radius:2px;margin-bottom:.9rem;display:flex;align-items:flex-start;gap:.9rem}
+.cdd-box.pass{border-color:rgba(0,232,120,.3);background:rgba(0,232,120,.04)}
+.cdd-box.medium{border-color:rgba(255,176,32,.3);background:rgba(255,176,32,.04)}
+.cdd-box.high{border-color:rgba(255,56,80,.3);background:rgba(255,56,80,.04)}
+.cdd-ico{font-size:1.6rem;flex-shrink:0}
+.cdd-verdict{font-family:var(--font-mono);font-size:.95rem;font-weight:600}
+.cdd-verdict.pass{color:var(--green)}.cdd-verdict.medium{color:var(--amber)}.cdd-verdict.high{color:var(--red)}
+.cdd-sub{font-size:.74rem;color:var(--muted);margin-top:.25rem;line-height:1.5}
+
+/* FLAGS */
+.flag-list{display:flex;flex-direction:column;gap:.35rem}
+.fi{display:flex;align-items:flex-start;gap:.55rem;font-size:.75rem;padding:.45rem .7rem;background:var(--bg);border:1px solid var(--border);border-left:2px solid}
+.fi.critical{border-left-color:var(--red)}
+.fi.warning{border-left-color:var(--amber)}
+.fi.info{border-left-color:var(--accent)}
+
+/* ENTITIES */
+.en{display:flex;align-items:center;gap:.7rem;padding:.6rem .7rem;background:var(--bg);border:1px solid var(--border);margin-bottom:.35rem;cursor:pointer;transition:border-color .15s}
+.en:hover{border-color:var(--border2)}
+.ei{width:30px;height:30px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:.75rem;flex-shrink:0}
+.ei.person{background:rgba(0,200,255,.08);border:1px solid rgba(0,200,255,.15)}
+.ei.company{background:rgba(160,96,255,.08);border:1px solid rgba(160,96,255,.15)}
+
+/* DETAIL GRID */
+.dg{display:grid;grid-template-columns:1fr 1fr;gap:.85rem}
+.df{display:flex;flex-direction:column;gap:.18rem}
+.dl{font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.dv{font-size:.82rem}
+
+/* TABS */
+.tab-bar{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.1rem}
+.tab{font-family:var(--font-mono);font-size:.65rem;letter-spacing:.07em;text-transform:uppercase;padding:.55rem .9rem;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* MODAL */
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;padding:1.25rem}
+.mo.active{display:flex}
+.md{background:var(--surface);border:1px solid var(--border2);width:100%;max-width:840px;max-height:88vh;display:flex;flex-direction:column;animation:mi .2s ease}
+@keyframes mi{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.mh{display:flex;justify-content:space-between;align-items:center;padding:.9rem 1.15rem;border-bottom:1px solid var(--border)}
+.mt{font-family:var(--font-mono);font-size:.78rem;font-weight:600;color:var(--accent);letter-spacing:.05em}
+.mc-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.95rem;padding:.2rem}
+.mc-btn:hover{color:var(--text)}
+.mb{padding:1.15rem;overflow-y:auto;flex:1}
+.mf{padding:.9rem 1.15rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:.65rem}
+
+/* AUDIT */
+.ae{display:flex;gap:.9rem;padding:.45rem 0;border-bottom:1px solid var(--border);font-size:.72rem}
+.ae:last-child{border-bottom:none}
+.at{font-family:var(--font-mono);font-size:.6rem;color:var(--dim);white-space:nowrap;min-width:115px}
+.am{color:var(--text)}
+.au{font-family:var(--font-mono);font-size:.6rem;color:var(--accent)}
+
+/* EMPTY */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem;color:var(--dim);font-family:var(--font-mono);font-size:.68rem;letter-spacing:.07em;text-align:center;gap:.65rem}
+.empty .eico{font-size:2rem;opacity:.25}
+
+/* TOAST */
+.tc{position:fixed;top:56px;right:1.25rem;display:flex;flex-direction:column;gap:.45rem;z-index:9998}
+.toast{background:var(--panel);border:1px solid var(--border2);padding:.6rem .9rem;font-family:var(--font-mono);font-size:.68rem;min-width:230px;animation:ti .2s ease;display:flex;align-items:center;gap:.55rem;border-radius:2px}
+.toast.success{border-left:3px solid var(--green)}.toast.error{border-left:3px solid var(--red)}.toast.info{border-left:3px solid var(--accent)}
+@keyframes ti{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+
+/* REASON CODE CHECKBOXES */
+#reason_code_checkboxes label.rc-active{
+  background:rgba(0,200,255,.1);border-color:var(--accent);color:var(--accent)
+}
+#reason_code_checkboxes label.rc-active .rc-check{
+  background:var(--accent);border-color:var(--accent)
+}
+
+/* PROGRESS BAR */
+.progress{height:2px;background:var(--border);margin:.5rem 0;border-radius:1px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);border-radius:1px;transition:width .3s;animation:prog 1.5s ease-in-out infinite}
+@keyframes prog{0%{width:0%;margin-left:0}50%{width:70%;margin-left:15%}100%{width:0%;margin-left:100%}}
+
+@media(max-width:768px){
+  .shell{grid-template-columns:1fr}
+  aside{display:none}
+  .stats{grid-template-columns:1fr 1fr}
+  .fg2,.fg3{grid-template-columns:1fr}
+  .dg{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><div class="logo-dot"></div>◈ AML·CDD PLATFORM <span style="color:var(--muted);font-size:.62rem;margin-left:.5rem">v2.0 · LIVE SCREENING</span></div>
+  <div class="header-meta">SOURCES: <span>OFAC SDN · UN SC · EU FSF · MAS (LOCAL)</span><br>ANALYST: <span>EDMUND KER</span> · <span id="liveTime"></span></div>
+</header>
+
+<div class="shell">
+<aside>
+  <div class="nav-sec">Overview</div>
+  <div class="nav-item active" onclick="showView('dashboard')"><span class="ico">⬡</span> Dashboard</div>
+  <div class="nav-sec">Screening</div>
+  <div class="nav-item" onclick="showView('customers')"><span class="ico">◉</span> All Profiles <span class="nbadge a" id="nb_pending" style="display:none">0</span></div>
+  <div class="nav-item" onclick="showView('add')"><span class="ico">＋</span> New Profile</div>
+  <div class="nav-sec">Compliance</div>
+  <div class="nav-item" onclick="showView('highrisk')"><span class="ico">⚠</span> High Risk <span class="nbadge" id="nb_high" style="display:none">0</span></div>
+  <div class="nav-item" onclick="showView('sanctions-hits')"><span class="ico">🚫</span> Sanctions Hits <span class="nbadge" id="nb_sanc" style="display:none">0</span></div>
+  <div class="nav-sec">Intelligence</div>
+  <div class="nav-item" onclick="showView('charts')"><span class="ico">📊</span> Charts</div>
+  <div class="nav-item" onclick="showView('watchlist')"><span class="ico">🗄</span> Watchlist DB</div>
+  <div class="nav-item" onclick="showView('entities')"><span class="ico">◈</span> Entity Links</div>
+  <div class="nav-item" onclick="showView('audit')"><span class="ico">≡</span> Audit Log</div>
+</aside>
+
+<main>
+
+<!-- DASHBOARD -->
+<div class="view active" id="view-dashboard">
+  <div class="ph">
+    <div><div class="pt">INTELLIGENCE DASHBOARD</div><div class="ps">Live AML/CDD screening — OFAC · UN · EU · MAS</div></div>
+    <button class="btn btn-p" onclick="showView('add')">+ NEW PROFILE</button>
+  </div>
+  <div class="stats">
+    <div class="sc b"><div class="sn b" id="d_total">0</div><div class="sl">Total Profiles</div></div>
+    <div class="sc g"><div class="sn g" id="d_low">0</div><div class="sl">Low Risk</div></div>
+    <div class="sc a"><div class="sn a" id="d_med">0</div><div class="sl">Medium Risk</div></div>
+    <div class="sc r"><div class="sn r" id="d_high">0</div><div class="sl">High Risk</div></div>
+  </div>
+  <div class="card">
+    <div class="ct">SANCTIONS COVERAGE</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;text-align:center">
+      <div style="padding:.75rem;background:var(--bg);border:1px solid var(--border)"><div style="font-family:var(--font-mono);font-size:1.1rem;color:var(--red)" id="d_ofac">✓</div><div style="font-family:var(--font-mono);font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:.25rem">OFAC SDN</div></div>
+      <div style="padding:.75rem;background:var(--bg);border:1px solid var(--border)"><div style="font-family:var(--font-mono);font-size:1.1rem;color:var(--accent)" id="d_un">✓</div><div style="font-family:var(--font-mono);font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:.25rem">UN SC</div></div>
+      <div style="padding:.75rem;background:var(--bg);border:1px solid var(--border)"><div style="font-family:var(--font-mono);font-size:1.1rem;color:var(--purple)" id="d_eu">✓</div><div style="font-family:var(--font-mono);font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:.25rem">EU FSF</div></div>
+      <div style="padding:.75rem;background:var(--bg);border:1px solid var(--border)"><div style="font-family:var(--font-mono);font-size:1.1rem;color:var(--amber)" id="d_mas">✓</div><div style="font-family:var(--font-mono);font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:.25rem">MAS (Local)</div></div>
+    </div>
+  </div>
+  <div class="card"><div class="ct">RECENT SCREENINGS</div><div id="d_recent"><div class="empty"><div class="eico">◈</div>No profiles screened yet</div></div></div>
+
+  <!-- API CONFIG PANEL -->
+  <div class="card" id="api_config_card">
+    <div class="ct">CLOUD API CONFIGURATION</div>
+    <div class="fg2" style="margin-bottom:.9rem">
+      <div class="fg">
+        <label>Backend Server URL</label>
+        <input id="cfg_url" placeholder="https://your-server.railway.app" value="https://YOUR-SERVER-URL.com"/>
+      </div>
+      <div class="fg">
+        <label>API Key (X-API-Key)</label>
+        <input id="cfg_key" type="password" placeholder="your-api-key" value="aml-dev-key-change-in-production"/>
+      </div>
+    </div>
+    <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-p btn-sm" onclick="saveApiConfig()">SAVE CONFIG</button>
+      <button class="btn btn-g btn-sm" onclick="testApiConnection()">TEST CONNECTION</button>
+      <div id="api_status" style="font-family:var(--font-mono);font-size:.65rem;color:var(--muted)">Not tested</div>
+    </div>
+  </div>
+</div>
+
+<!-- ALL PROFILES -->
+<div class="view" id="view-customers">
+  <div class="ph">
+    <div><div class="pt">CUSTOMER PROFILES</div><div class="ps">All screened entities</div></div>
+    <button class="btn btn-p" onclick="showView('add')">+ NEW PROFILE</button>
+  </div>
+  <div class="tw">
+    <div class="tb">
+      <input class="tsearch" placeholder="Search name, ID, entity…" oninput="filterCx(this.value)" id="cx_search"/>
+      <div style="display:flex;gap:.5rem">
+        <select style="font-family:var(--font-mono);font-size:.68rem;background:var(--bg);border:1px solid var(--border2);color:var(--muted);padding:.32rem .55rem;border-radius:2px" onchange="fStatus=this.value;applyF()">
+          <option value="">All Risk</option><option>LOW</option><option>MEDIUM</option><option>HIGH</option>
+        </select>
+        <button class="btn btn-g btn-sm" onclick="exportAllCSV()">↓ EXPORT CSV</button>
+      </div>
+    </div>
+    <table><thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Nationality</th><th>Risk Score</th><th>Risk Level</th><th>Sanctions</th><th>PEP</th><th>Screened</th><th>Actions</th></tr></thead>
+    <tbody id="cx_tbody"><tr><td colspan="10"><div class="empty"><div class="eico">◉</div>No profiles — add one to begin</div></td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- ADD PROFILE -->
+<div class="view" id="view-add">
+  <div class="ph">
+    <div><div class="pt">NEW CUSTOMER PROFILE</div><div class="ps">Live sanctions screening on submission — OFAC · UN · EU · MAS</div></div>
+    <button class="btn btn-g" onclick="showView('customers')">← BACK</button>
+  </div>
+
+  <!-- LIVE SANCTIONS SEARCH -->
+  <div class="card">
+    <div class="ct">LIVE SANCTIONS SEARCH (Pre-Screen)</div>
+    <div style="display:flex;gap:.75rem;margin-bottom:.75rem">
+      <input id="live_name" placeholder="Type name to search sanctions lists live…" style="flex:1" oninput="debounceLive(this.value)"/>
+      <button class="btn btn-p btn-sm" onclick="runLiveSearch()">SEARCH</button>
+    </div>
+    <div class="sp-sources">
+      <div class="sp-src ofac active" id="src_ofac" onclick="toggleSrc('ofac')">OFAC SDN</div>
+      <div class="sp-src un active" id="src_un" onclick="toggleSrc('un')">UN SC</div>
+      <div class="sp-src eu active" id="src_eu" onclick="toggleSrc('eu')">EU FSF</div>
+      <div class="sp-src mas active" id="src_mas" onclick="toggleSrc('mas')">MAS (Local)</div>
+    </div>
+    <div id="live_status" style="font-family:var(--font-mono);font-size:.62rem;color:var(--muted);margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem">
+      <div class="sp-spinner" id="live_spin"></div>
+      <span id="live_status_txt">Enter name above to run live sanctions check</span>
+    </div>
+    <div id="live_results"></div>
+  </div>
+
+  <div class="card">
+    <div class="ct">PROFILE INFORMATION</div>
+    <div class="fg2">
+      <div class="fg"><label>Full Legal Name *</label><input id="f_name" placeholder="As per NRIC / Passport / ACRA"/></div>
+      <div class="fg"><label>Entity Type *</label>
+        <select id="f_type">
+          <option value="INDIVIDUAL">Individual</option>
+          <option value="CORPORATE">Corporate Entity</option>
+          <option value="PARTNERSHIP">Partnership</option>
+          <option value="TRUST">Trust / Foundation</option>
+        </select>
+      </div>
+      <div class="fg"><label>Date of Birth / Incorporation</label><input id="f_dob" type="date"/></div>
+      <div class="fg"><label>NRIC / Passport / UEN</label><input id="f_id" placeholder="S1234567A / T12345678B"/></div>
+      <div class="fg"><label>Nationality / Country of Incorporation</label>
+        <select id="f_nat">
+          <option>Singapore</option><option>Malaysia</option><option>China</option><option>India</option><option>Indonesia</option><option>United States</option><option>United Kingdom</option><option>Hong Kong</option><option>Thailand</option><option>Vietnam</option><option>Philippines</option><option>Myanmar</option><option>Cambodia</option><option>Iran</option><option>North Korea</option><option>Russia</option><option>Syria</option><option>Other High-Risk Country</option>
+        </select>
+      </div>
+      <div class="fg"><label>Occupation / Industry</label>
+        <select id="f_occ">
+          <option>Banking & Finance</option><option>Accounting / Audit</option><option>Legal / Law</option><option>Real Estate</option><option>Precious Metals / Stones</option><option>Gambling / Casino</option><option>Cryptocurrency / Digital Assets</option><option>Import / Export</option><option>Technology</option><option>Healthcare</option><option>Government / Civil Service</option><option>Retail / F&B</option><option>Manufacturing</option><option>Other</option>
+        </select>
+      </div>
+      <div class="fg"><label>Address</label><input id="f_addr" placeholder="Block, Street, Unit, Postal Code"/></div>
+      <div class="fg"><label>Contact / Email</label><input id="f_contact" placeholder="email@domain.com / +65 XXXX XXXX"/></div>
+
+      <div class="sdiv">Financial Profile</div>
+      <div class="fg"><label>Source of Funds</label>
+        <select id="f_sof"><option>Employment Income</option><option>Business Revenue</option><option>Investment Returns</option><option>Inheritance</option><option>Property Sale</option><option>Loan Proceeds</option><option>Gift</option><option>Unknown</option></select>
+      </div>
+      <div class="fg"><label>Source of Wealth</label>
+        <select id="f_sow"><option>Salary / Wages</option><option>Business Ownership</option><option>Inheritance / Estate</option><option>Investments</option><option>Property</option><option>Other</option><option>Unknown / Unable to Verify</option></select>
+      </div>
+      <div class="fg"><label>Estimated Annual Income (SGD)</label>
+        <select id="f_inc"><option>&lt; $30,000</option><option>$30,000 – $100,000</option><option>$100,000 – $300,000</option><option>$300,000 – $1M</option><option>&gt; $1M</option><option>Unknown</option></select>
+      </div>
+      <div class="fg"><label>Expected Transaction Volume</label>
+        <select id="f_txn"><option>Low (&lt; $50K/yr)</option><option>Medium ($50K–$500K/yr)</option><option>High ($500K–$5M/yr)</option><option>Very High (&gt; $5M/yr)</option></select>
+      </div>
+
+      <div class="sdiv">PEP Status</div>
+      <div class="fg"><label>PEP Classification</label>
+        <select id="f_pep"><option value="0">Not a PEP</option><option value="1">Current PEP</option><option value="2">Former PEP</option><option value="3">PEP Associate / Family Member</option></select>
+      </div>
+      <div class="fg"><label>PEP Jurisdiction (if applicable)</label><input id="f_pepjur" placeholder="e.g. Singapore, Malaysia…"/></div>
+      <div class="fg"><label>Adverse Media</label>
+        <select id="f_adverse"><option value="0">None</option><option value="1">Minor / Unconfirmed</option><option value="2">Confirmed Adverse Coverage</option><option value="3">Criminal Charges / Conviction</option></select>
+      </div>
+      <div class="fg"><label>Prior SAR / STR Filed?</label>
+        <select id="f_sar"><option value="0">No</option><option value="1">Yes — Prior Institution</option><option value="2">Yes — This Institution</option></select>
+      </div>
+
+      <div class="sdiv">Business & Corporate Links</div>
+      <div class="fg full"><label>Associated Business / Company Names (comma separated)</label><input id="f_biz" placeholder="Acme Pte Ltd, BizCo Sdn Bhd"/></div>
+      <div class="fg"><label>Business Registration Number(s)</label><input id="f_bizreg" placeholder="202312345A, 1234567-X"/></div>
+      <div class="fg"><label>Role in Business</label>
+        <select id="f_bizrole"><option>Director</option><option>Shareholder (&gt;25%)</option><option>Ultimate Beneficial Owner (UBO)</option><option>Nominee Director</option><option>Authorized Signatory</option><option>Employee</option><option>No Formal Role</option></select>
+      </div>
+      <div class="fg"><label>Business Industry</label>
+        <select id="f_bizind"><option>Financial Services</option><option>Real Estate</option><option>Cryptocurrency / Digital Assets</option><option>Legal / Professional Services</option><option>Import / Export / Trading</option><option>Construction</option><option>Hospitality / F&B</option><option>Technology</option><option>Healthcare</option><option>Manufacturing</option><option>Retail</option><option>Other</option></select>
+      </div>
+      <div class="fg full"><label>Related Entities / UBO Chain</label><textarea id="f_related" placeholder="Describe ownership/control structure: e.g. John Tan (Director, 60%) → Acme Pte Ltd → BizCo Sdn Bhd (subsidiary)…"></textarea></div>
+      <div class="fg full"><label>Analyst Notes</label><textarea id="f_notes" placeholder="Additional observations, inconsistencies, or context…"></textarea></div>
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:1.25rem;flex-wrap:wrap">
+      <button class="btn btn-p" onclick="submitProfile()">▶ RUN FULL SCREENING</button>
+      <button class="btn btn-g" onclick="clearForm()">CLEAR</button>
+    </div>
+    <div id="submit_progress" style="display:none">
+      <div style="margin-top:.75rem;font-family:var(--font-mono);font-size:.65rem;color:var(--accent)" id="submit_msg">Initialising screening…</div>
+      <div class="progress"><div class="progress-fill"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- HIGH RISK -->
+<div class="view" id="view-highrisk">
+  <div class="ph"><div><div class="pt">HIGH RISK PROFILES</div><div class="ps">Profiles with risk score ≥ 60 — requiring enhanced review</div></div></div>
+  <div class="tw">
+    <table><thead><tr><th>ID</th><th>Name</th><th>Risk Score</th><th>Primary Flag</th><th>Sanctions</th><th>PEP</th><th>Action</th></tr></thead>
+    <tbody id="hr_tbody"><tr><td colspan="7"><div class="empty"><div class="eico">⚠</div>No high-risk profiles</div></td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- SANCTIONS HITS -->
+<div class="view" id="view-sanctions-hits">
+  <div class="ph"><div><div class="pt">SANCTIONS HITS</div><div class="ps">Profiles with confirmed or potential sanctions matches</div></div></div>
+  <div class="tw">
+    <table><thead><tr><th>ID</th><th>Name</th><th>Match Type</th><th>Matched List</th><th>Matched Entity</th><th>Risk Score</th><th>Action</th></tr></thead>
+    <tbody id="sanc_tbody"><tr><td colspan="7"><div class="empty"><div class="eico">🚫</div>No sanctions hits</div></td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- CHARTS -->
+<div class="view" id="view-charts">
+  <div class="ph">
+    <div><div class="pt">CLASSIFICATION CHARTS</div><div class="ps">Visual analytics across all screened profiles</div></div>
+    <button class="btn btn-g btn-sm" onclick="renderCharts()">↺ REFRESH</button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+    <div class="card" style="margin-bottom:0">
+      <div class="ct">RISK LEVEL DISTRIBUTION</div>
+      <div style="position:relative;height:240px;display:flex;align-items:center;justify-content:center">
+        <canvas id="chart_risk_donut"></canvas>
+        <div style="position:absolute;text-align:center;pointer-events:none">
+          <div style="font-family:var(--font-mono);font-size:1.6rem;font-weight:600;color:var(--text)" id="chart_risk_total">0</div>
+          <div style="font-family:var(--font-mono);font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em">Total</div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="ct">RISK SCORE HISTOGRAM (0–100)</div>
+      <div style="position:relative;height:240px"><canvas id="chart_score_hist"></canvas></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+    <div class="card" style="margin-bottom:0">
+      <div class="ct">SANCTIONS SCREENING RESULTS</div>
+      <div style="position:relative;height:220px"><canvas id="chart_sanctions_pie"></canvas></div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="ct">PEP CLASSIFICATION BREAKDOWN</div>
+      <div style="position:relative;height:220px"><canvas id="chart_pep_bar"></canvas></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+    <div class="card" style="margin-bottom:0">
+      <div class="ct">TOP NATIONALITIES</div>
+      <div style="position:relative;height:240px"><canvas id="chart_nationality"></canvas></div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="ct">TOP OCCUPATIONS</div>
+      <div style="position:relative;height:240px"><canvas id="chart_occupation"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">SCREENINGS OVER TIME</div>
+    <div style="position:relative;height:200px"><canvas id="chart_timeline"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="ct">TOP RISK FLAG TRIGGERS</div>
+    <div style="position:relative;height:200px"><canvas id="chart_flags"></canvas></div>
+  </div>
+  <div id="charts_empty" style="display:none"><div class="empty"><div class="eico">📊</div>No data yet — add profiles to see charts</div></div>
+</div>
+
+<!-- WATCHLIST DB MANAGER -->
+<div class="view" id="view-watchlist">
+  <div class="ph">
+    <div><div class="pt">WATCHLIST DATABASE</div><div class="ps">Internal watchlist — Supabase PostgreSQL · exact + fuzzy match</div></div>
+    <div style="display:flex;gap:.6rem">
+      <button class="btn btn-g btn-sm" onclick="loadWatchlist()">↺ REFRESH</button>
+      <button class="btn btn-p btn-sm" onclick="showWLModal()">+ ADD ENTITY</button>
+    </div>
+  </div>
+
+  <!-- LIVE SEARCH BAR -->
+  <div class="card" style="margin-bottom:.9rem">
+    <div class="ct">LIVE WATCHLIST SEARCH</div>
+    <div style="display:flex;gap:.75rem;align-items:center">
+      <input id="wl_search_input" placeholder="Search watchlist by name — exact + fuzzy…" style="flex:1" oninput="debounceWLSearch(this.value)"/>
+      <select id="wl_search_type" style="font-family:var(--font-mono);font-size:.7rem;background:var(--bg);border:1px solid var(--border2);color:var(--muted);padding:.45rem .65rem;border-radius:2px;width:140px">
+        <option value="">All Types</option>
+        <option value="INDIVIDUAL">Individual</option>
+        <option value="CORPORATE">Corporate</option>
+      </select>
+      <button class="btn btn-p btn-sm" onclick="runWLSearch()">SEARCH</button>
+    </div>
+    <div id="wl_search_results" style="margin-top:.75rem"></div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div style="display:flex;gap:.6rem;margin-bottom:.75rem;flex-wrap:wrap;align-items:center">
+    <select id="wl_filter_tier" style="font-family:var(--font-mono);font-size:.68rem;background:var(--bg);border:1px solid var(--border2);color:var(--muted);padding:.35rem .6rem;border-radius:2px" onchange="loadWatchlist()">
+      <option value="">All Risk Tiers</option>
+      <option value="CRITICAL">Critical</option>
+      <option value="HIGH">High</option>
+      <option value="MEDIUM">Medium</option>
+      <option value="LOW">Low</option>
+    </select>
+    <select id="wl_filter_type" style="font-family:var(--font-mono);font-size:.68rem;background:var(--bg);border:1px solid var(--border2);color:var(--muted);padding:.35rem .6rem;border-radius:2px" onchange="loadWatchlist()">
+      <option value="">All Entity Types</option>
+      <option value="INDIVIDUAL">Individual</option>
+      <option value="CORPORATE">Corporate</option>
+      <option value="PARTNERSHIP">Partnership</option>
+      <option value="TRUST">Trust</option>
+    </select>
+    <div id="wl_count" style="font-family:var(--font-mono);font-size:.62rem;color:var(--muted);margin-left:auto"></div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th>Risk Tier</th><th>Name</th><th>Type</th><th>Nationality</th>
+        <th>ID / UEN</th><th>Reason Codes</th><th>Source</th><th>Listed</th><th>Actions</th>
+      </tr></thead>
+      <tbody id="wl_tbody">
+        <tr><td colspan="9"><div class="empty"><div class="eico">🗄</div>Connect cloud API to load watchlist</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- STATS ROW -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem;margin-top:.9rem">
+    <div class="sc r" style="margin-bottom:0"><div class="sn r" id="wl_stat_critical">—</div><div class="sl">Critical</div></div>
+    <div class="sc r" style="margin-bottom:0"><div class="sn r" id="wl_stat_high">—</div><div class="sl">High Risk</div></div>
+    <div class="sc a" style="margin-bottom:0"><div class="sn a" id="wl_stat_med">—</div><div class="sl">Medium Risk</div></div>
+    <div class="sc b" style="margin-bottom:0"><div class="sn b" id="wl_stat_total">—</div><div class="sl">Total Entries</div></div>
+  </div>
+</div>
+
+<!-- ENTITIES -->
+<div class="view" id="view-entities">
+  <div class="ph"><div><div class="pt">ENTITY RELATIONSHIP MAP</div><div class="ps">Corporate structures, UBO chains, and beneficial ownership links</div></div></div>
+  <div id="entity_list"><div class="empty"><div class="eico">◈</div>No linked entities yet</div></div>
+</div>
+
+<!-- AUDIT -->
+<div class="view" id="view-audit">
+  <div class="ph">
+    <div><div class="pt">AUDIT LOG</div><div class="ps">Full immutable trail of all screening activities</div></div>
+    <button class="btn btn-g btn-sm" onclick="exportAuditCSV()">↓ EXPORT CSV</button>
+  </div>
+  <div class="card"><div id="audit_log"><div class="empty"><div class="eico">≡</div>No entries</div></div></div>
+</div>
+
+</main>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="mo" id="modal_detail">
+  <div class="md">
+    <div class="mh"><div class="mt" id="modal_title">PROFILE DETAIL</div><button class="mc-btn" onclick="closeModal('modal_detail')">✕</button></div>
+    <div class="mb" id="modal_body"></div>
+    <div class="mf">
+      <button class="btn btn-g btn-sm" onclick="closeModal('modal_detail')">CLOSE</button>
+      <button class="btn btn-r btn-sm" id="btn_override" onclick="overrideHigh()">ESCALATE → HIGH RISK</button>
+      <button class="btn btn-p btn-sm" onclick="exportProfileReport()">↓ EXPORT REPORT</button>
+    </div>
+  </div>
+</div>
+
+<!-- WATCHLIST ADD ENTITY MODAL -->
+<div class="mo" id="modal_wl_add">
+  <div class="md" style="max-width:700px">
+    <div class="mh">
+      <div class="mt">ADD ENTITY TO WATCHLIST</div>
+      <button class="mc-btn" onclick="closeModal('modal_wl_add')">✕</button>
+    </div>
+    <div class="mb">
+      <div class="fg2">
+        <div class="fg"><label>Full Legal Name *</label><input id="wl_name" placeholder="As per NRIC / ACRA / Passport"/></div>
+        <div class="fg"><label>Entity Type *</label>
+          <select id="wl_type">
+            <option value="INDIVIDUAL">Individual</option>
+            <option value="CORPORATE">Corporate Entity</option>
+            <option value="PARTNERSHIP">Partnership</option>
+            <option value="TRUST">Trust / Foundation</option>
+          </select>
+        </div>
+        <div class="fg"><label>Risk Tier *</label>
+          <select id="wl_tier">
+            <option value="LOW">LOW</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="HIGH" selected>HIGH</option>
+            <option value="CRITICAL">CRITICAL</option>
+          </select>
+        </div>
+        <div class="fg"><label>ID / NRIC / UEN / Passport</label><input id="wl_idnum" placeholder="S1234567A / 202312345A"/></div>
+        <div class="fg"><label>Nationality / Country</label>
+          <select id="wl_nationality">
+            <option>Singapore</option><option>Malaysia</option><option>China</option><option>India</option>
+            <option>Indonesia</option><option>Myanmar</option><option>Vietnam</option><option>Philippines</option>
+            <option>Cambodia</option><option>Iran</option><option>North Korea</option><option>Russia</option>
+            <option>United States</option><option>United Kingdom</option><option>Other</option>
+          </select>
+        </div>
+        <div class="fg"><label>Source</label>
+          <select id="wl_source">
+            <option>Internal</option><option>MAS Advisory</option><option>Police Report</option>
+            <option>OFAC</option><option>UN Security Council</option><option>EU</option>
+            <option>Court Order</option><option>STR Investigation</option><option>Other</option>
+          </select>
+        </div>
+        <div class="fg full"><label>Reason Codes (select all that apply)</label>
+          <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.3rem" id="reason_code_checkboxes">
+            <!-- injected by JS -->
+          </div>
+        </div>
+        <div class="fg full"><label>Reason / Narrative *</label>
+          <textarea id="wl_reason" placeholder="Describe why this entity is being listed — key facts, dates, and references…"></textarea>
+        </div>
+        <div class="fg"><label>Case Reference</label><input id="wl_caseref" placeholder="CASE-2024-XXXX"/></div>
+        <div class="fg"><label>Aliases / AKA (comma separated)</label><input id="wl_aliases" placeholder="John Tan, 陈伟明, JT Holdings"/></div>
+        <div class="fg full"><label>Linked Entities (one per line: Name | Relationship | Ownership%)</label>
+          <textarea id="wl_linked" placeholder="Acme Pte Ltd | Subsidiary | 100&#10;Jane Doe | Spouse | 0&#10;BizCo Sdn Bhd | Associated Company | 45"></textarea>
+        </div>
+        <div class="fg full"><label>Notes</label><textarea id="wl_notes" placeholder="Additional context, file references, analyst observations…"></textarea></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-g btn-sm" onclick="closeModal('modal_wl_add')">CANCEL</button>
+      <button class="btn btn-p btn-sm" onclick="submitWatchlistEntry()">▶ ADD TO WATCHLIST</button>
+    </div>
+  </div>
+</div>
+
+<!-- WATCHLIST ENTITY DETAIL MODAL -->
+<div class="mo" id="modal_wl_detail">
+  <div class="md" style="max-width:680px">
+    <div class="mh"><div class="mt" id="wl_detail_title">WATCHLIST ENTRY</div><button class="mc-btn" onclick="closeModal('modal_wl_detail')">✕</button></div>
+    <div class="mb" id="wl_detail_body"></div>
+    <div class="mf">
+      <button class="btn btn-g btn-sm" onclick="closeModal('modal_wl_detail')">CLOSE</button>
+      <button class="btn btn-r btn-sm" id="btn_deactivate" onclick="deactivateWLEntry()">DEACTIVATE ENTRY</button>
+    </div>
+  </div>
+</div>
+
+<div class="tc" id="toasts"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let profiles = JSON.parse(localStorage.getItem('aml2_profiles') || '[]');
+let auditLog  = JSON.parse(localStorage.getItem('aml2_audit') || '[]');
+let activeId  = null;
+let fStatus   = '';
+let liveDebounce = null;
+let activeSources = {ofac:true, un:true, eu:true, mas:true};
+
+// MAS local red-flag names (representative set for demo)
+const MAS_LIST = ['AL QAEDA','JEMAAH ISLAMIYAH','ABU SAYYAF','HEZBOLLAH','HAMAS','ISLAMIC STATE','ISIS','DAESH','FARC','LASHKAR','HAQQANI','AL SHABAAB'];
+
+// ─────────────────────────────────────────────
+// CLOCK
+// ─────────────────────────────────────────────
+setInterval(() => {
+  document.getElementById('liveTime').textContent = new Date().toLocaleString('en-SG',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}, 1000);
+
+// ─────────────────────────────────────────────
+// NAVIGATION
+// ─────────────────────────────────────────────
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const v = document.getElementById('view-' + id);
+  if (v) v.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'"+id+"'")) n.classList.add('active');
+  });
+  const renders = {
+    dashboard: renderDashboard,
+    customers: () => renderTable(profiles),
+    highrisk: renderHighRisk,
+    'sanctions-hits': renderSanctionsHits,
+    charts: renderCharts,
+    watchlist: loadWatchlist,
+    entities: renderEntities,
+    audit: renderAudit,
+  };
+  if (renders[id]) renders[id]();
+}
+
+// ─────────────────────────────────────────────
+// LIVE SANCTIONS API — sanctions.network (FREE, no key)
+// Covers: OFAC SDN, UN Security Council, EU FSF
+// ─────────────────────────────────────────────
+function toggleSrc(src) {
+  activeSources[src] = !activeSources[src];
+  document.getElementById('src_' + src).classList.toggle('active', activeSources[src]);
+}
+
+function debounceLive(val) {
+  clearTimeout(liveDebounce);
+  if (val.length < 3) { document.getElementById('live_results').innerHTML = ''; return; }
+  liveDebounce = setTimeout(() => runLiveSearch(), 600);
+}
+
+async function runLiveSearch() {
+  const name = (document.getElementById('live_name').value || document.getElementById('f_name').value).trim();
+  if (!name || name.length < 3) { toast('Enter at least 3 characters', 'error'); return; }
+
+  const spin = document.getElementById('live_spin');
+  const statusTxt = document.getElementById('live_status_txt');
+  const resultsDiv = document.getElementById('live_results');
+
+  spin.classList.add('active');
+  statusTxt.textContent = 'Querying sanctions databases…';
+  resultsDiv.innerHTML = '';
+
+  let allMatches = [];
+  let errors = [];
+
+  try {
+    // sanctions.network: OFAC + UN + EU via fuzzy trigram search
+    const url = `https://api.sanctions.network/rpc/search_sanctions?name=${encodeURIComponent(name)}&limit=20`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (res.ok) {
+      const data = await res.json();
+      for (const item of (data || [])) {
+        const sources = Array.isArray(item.source) ? item.source : [item.source];
+        for (const src of sources) {
+          if (src === 'ofac' && !activeSources.ofac) continue;
+          if (src === 'unsc' && !activeSources.un) continue;
+          if (src === 'eu' && !activeSources.eu) continue;
+          const names = Array.isArray(item.names) ? item.names : [item.names];
+          const matchName = names[0] || 'Unknown';
+          const similarity = fuzzyScore(name.toUpperCase(), matchName.toUpperCase());
+          allMatches.push({
+            matchName, source: src,
+            sourceLabel: {ofac:'OFAC SDN', unsc:'UN Security Council', eu:'EU Financial Sanctions File'}[src] || src,
+            program: item.program || '',
+            countries: Array.isArray(item.countries) ? item.countries.join(', ') : (item.countries || ''),
+            dob: item.birthdate || '',
+            similarity,
+            isHit: similarity > 0.65
+          });
+        }
+      }
+    } else {
+      errors.push('sanctions.network returned ' + res.status);
+    }
+  } catch(e) {
+    errors.push('Network error — check connection');
+  }
+
+  // MAS local list check
+  if (activeSources.mas) {
+    const upper = name.toUpperCase();
+    for (const entry of MAS_LIST) {
+      if (upper.includes(entry) || entry.includes(upper.split(' ')[0])) {
+        allMatches.push({
+          matchName: entry, source: 'mas',
+          sourceLabel: 'MAS Designated Entities (SG)',
+          program: 'MAS Counter-Terrorism Financing',
+          countries: 'Multiple', dob: '',
+          similarity: 0.9, isHit: true
+        });
+      }
+    }
+  }
+
+  spin.classList.remove('active');
+
+  if (errors.length && !allMatches.length) {
+    statusTxt.textContent = '⚠ Could not reach live API — using local rules only';
+    statusTxt.style.color = 'var(--amber)';
+  } else if (allMatches.length) {
+    const hits = allMatches.filter(m => m.isHit);
+    statusTxt.textContent = `Found ${allMatches.length} result(s) — ${hits.length} potential match(es)`;
+    statusTxt.style.color = hits.length ? 'var(--red)' : 'var(--amber)';
+  } else {
+    statusTxt.textContent = `✓ No matches found for "${name}" across active lists`;
+    statusTxt.style.color = 'var(--green)';
+    resultsDiv.innerHTML = `<div class="match-card clear"><div class="match-name clear">✓ CLEAR — No sanctions matches found</div><div class="match-meta"><span class="match-tag">Searched: ${Object.keys(activeSources).filter(k=>activeSources[k]).join(' · ').toUpperCase()}</span></div></div>`;
+    return;
+  }
+
+  resultsDiv.innerHTML = allMatches.map(m => `
+    <div class="match-card ${m.isHit ? 'hit' : 'potential'}">
+      <div class="match-name ${m.isHit ? 'hit' : 'potential'}">${m.isHit ? '🚫' : '⚠'} ${m.matchName}</div>
+      <div class="match-meta">
+        <span class="match-tag" style="color:${m.isHit?'var(--red)':'var(--amber)'}">${m.sourceLabel}</span>
+        ${m.program ? `<span class="match-tag">${m.program}</span>` : ''}
+        ${m.countries ? `<span class="match-tag">📍 ${m.countries}</span>` : ''}
+        ${m.dob ? `<span class="match-tag">DOB: ${m.dob}</span>` : ''}
+        <span class="match-tag">Similarity: ${Math.round(m.similarity*100)}%</span>
+      </div>
+    </div>`).join('');
+
+  return allMatches;
+}
+
+// Simple fuzzy score (Dice coefficient on bigrams)
+function fuzzyScore(a, b) {
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  if (a.includes(b) || b.includes(a)) return 0.85;
+  const bigrams = s => { const bg = new Set(); for(let i=0;i<s.length-1;i++) bg.add(s[i]+s[i+1]); return bg; };
+  const ba = bigrams(a), bb = bigrams(b);
+  let inter = 0;
+  for (const bg of ba) if (bb.has(bg)) inter++;
+  return (2 * inter) / (ba.size + bb.size);
+}
+
+// ─────────────────────────────────────────────
+// RISK ENGINE
+// ─────────────────────────────────────────────
+function calcRisk(data) {
+  let score = 0;
+  let flags = [];
+
+  const highRiskCountries = ['Myanmar','Cambodia','Iran','North Korea','Russia','Syria','Other High-Risk Country'];
+  const medRiskCountries  = ['Indonesia','Vietnam','Philippines','China'];
+  if (highRiskCountries.includes(data.nationality)) { score += 30; flags.push({level:'critical', msg:'High-risk / sanctioned jurisdiction: '+data.nationality}); }
+  else if (medRiskCountries.includes(data.nationality)) { score += 12; flags.push({level:'warning', msg:'Elevated-risk jurisdiction: '+data.nationality}); }
+
+  // PEP
+  const pepPts = [0,30,18,14];
+  if (+data.pep > 0) { score += pepPts[+data.pep]; flags.push({level:'critical', msg:'PEP: '+['','Current PEP','Former PEP','PEP Associate'][+data.pep]+(data.pepJur?' ('+data.pepJur+')':'')}); }
+
+  // Adverse
+  const advPts = [0,10,25,40];
+  if (+data.adverse > 0) { score += advPts[+data.adverse]; flags.push({level:+data.adverse>=2?'critical':'warning', msg:'Adverse media: '+['','Minor reports','Confirmed adverse','Criminal charges/conviction'][+data.adverse]}); }
+
+  // SAR
+  if (+data.sar === 2) { score += 22; flags.push({level:'critical', msg:'Prior STR/SAR at this institution'}); }
+  else if (+data.sar === 1) { score += 10; flags.push({level:'warning', msg:'Prior STR/SAR at another institution'}); }
+
+  // Occupation
+  const hiOcc = ['Gambling / Casino','Cryptocurrency / Digital Assets','Precious Metals / Stones'];
+  const mdOcc = ['Legal / Law','Real Estate','Import / Export'];
+  if (hiOcc.includes(data.occupation)) { score += 15; flags.push({level:'warning', msg:'High-risk occupation: '+data.occupation}); }
+  else if (mdOcc.includes(data.occupation)) { score += 7; flags.push({level:'info', msg:'Elevated-risk occupation: '+data.occupation}); }
+
+  // Business industry
+  const hiBiz = ['Cryptocurrency / Digital Assets','Legal / Professional Services'];
+  const mdBiz = ['Real Estate','Import / Export / Trading','Financial Services'];
+  if (hiBiz.includes(data.bizIndustry)) { score += 12; flags.push({level:'warning', msg:'High-risk sector: '+data.bizIndustry}); }
+  else if (mdBiz.includes(data.bizIndustry)) { score += 6; flags.push({level:'info', msg:'Elevated-risk sector: '+data.bizIndustry}); }
+
+  // SOF/SOW unknown
+  if (data.sof === 'Unknown' || data.sow === 'Unknown / Unable to Verify') { score += 15; flags.push({level:'critical', msg:'Source of funds/wealth unknown or unverifiable'}); }
+
+  // Income vs txn mismatch
+  const hiTxn = data.txnVol.includes('Very High') || data.txnVol.includes('High ($500K');
+  const loInc = data.income.includes('< $30') || data.income.includes('$30,000');
+  if (hiTxn && loInc) { score += 22; flags.push({level:'critical', msg:'Transaction volume inconsistent with declared income — possible structuring'}); }
+
+  // Nominee director
+  if (data.bizRole === 'Nominee Director') { score += 13; flags.push({level:'warning', msg:'Nominee director — beneficial ownership requires verification'}); }
+
+  // Complex structure
+  if (data.relatedEntities && data.relatedEntities.length > 60) { score += 8; flags.push({level:'info', msg:'Complex corporate structure — UBO mapping recommended'}); }
+
+  // Sanctions hits (set externally)
+  if (data.sanctionsHits && data.sanctionsHits.length > 0) {
+    const confirmedHits = data.sanctionsHits.filter(h => h.isHit);
+    if (confirmedHits.length > 0) {
+      score += 40;
+      flags.push({level:'critical', msg:`SANCTIONS MATCH: ${confirmedHits.length} hit(s) on ${[...new Set(confirmedHits.map(h=>h.sourceLabel))].join(', ')}`});
+    } else {
+      score += 15;
+      flags.push({level:'warning', msg:`Potential sanctions match — ${data.sanctionsHits.length} result(s) require manual review`});
+    }
+  }
+
+  score = Math.min(score, 100);
+  const level = score < 35 ? 'LOW' : score < 65 ? 'MEDIUM' : 'HIGH';
+  return { score, level, flags };
+}
+
+// ─────────────────────────────────────────────
+// SUBMIT PROFILE
+// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// CLOUD API CONFIG
+// Set your deployed backend URL and API key here
+// ─────────────────────────────────────────────
+const CLOUD_API = {
+  url: 'https://YOUR-SERVER-URL.com',   // ← Replace with your Railway/Render/AWS URL
+  key: 'aml-dev-key-change-in-production' // ← Replace with your API_KEY from .env
+};
+
+async function submitProfile() {
+  const name = document.getElementById('f_name').value.trim();
+  if (!name) { toast('Full legal name is required', 'error'); return; }
+
+  const btn = document.querySelector('[onclick="submitProfile()"]');
+  btn.disabled = true;
+  btn.textContent = '⏳ SCREENING…';
+  const progEl = document.getElementById('submit_progress');
+  const msgEl  = document.getElementById('submit_msg');
+  progEl.style.display = 'block';
+
+  const steps = [
+    'Connecting to screening server…',
+    'Querying OFAC SDN list…',
+    'Checking UN Security Council…',
+    'Screening EU Financial Sanctions…',
+    'Checking MAS designated entities…',
+    'Running PEP checks…',
+    'Calculating composite risk score…',
+    'Finalising report…'
+  ];
+  let si = 0;
+  const ticker = setInterval(() => { if (si < steps.length) msgEl.textContent = steps[si++]; }, 500);
+
+  // Build payload matching backend ScreeningRequest schema
+  const payload = {
+    name,
+    entity_type:         document.getElementById('f_type').value,
+    nationality:         document.getElementById('f_nat').value,
+    occupation:          document.getElementById('f_occ').value,
+    dob:                 document.getElementById('f_dob').value || null,
+    id_number:           document.getElementById('f_id').value || null,
+    address:             document.getElementById('f_addr').value || null,
+    source_of_funds:     document.getElementById('f_sof').value,
+    source_of_wealth:    document.getElementById('f_sow').value,
+    income_bracket:      document.getElementById('f_inc').value,
+    transaction_volume:  document.getElementById('f_txn').value,
+    pep_status:          +document.getElementById('f_pep').value,
+    pep_jurisdiction:    document.getElementById('f_pepjur').value || null,
+    adverse_media:       +document.getElementById('f_adverse').value,
+    prior_sar:           +document.getElementById('f_sar').value,
+    business_name:       document.getElementById('f_biz').value || null,
+    business_reg:        document.getElementById('f_bizreg').value || null,
+    business_role:       document.getElementById('f_bizrole').value,
+    business_industry:   document.getElementById('f_bizind').value,
+    related_entities:    document.getElementById('f_related').value || null,
+    notes:               document.getElementById('f_notes').value || null,
+  };
+
+  let result = null;
+  let usedFallback = false;
+
+  try {
+    const resp = await fetch(`${CLOUD_API.url}/screen`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': CLOUD_API.key
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(15000)
+    });
+
+    if (resp.status === 403) {
+      clearInterval(ticker);
+      toast('Invalid API key — check CLOUD_API.key in config', 'error');
+      btn.disabled = false; btn.textContent = '▶ RUN FULL SCREENING';
+      progEl.style.display = 'none';
+      return;
+    }
+    if (!resp.ok) throw new Error(`Server returned ${resp.status}`);
+    result = await resp.json();
+
+  } catch (err) {
+    // Fallback: run local risk engine if server unreachable
+    usedFallback = true;
+    clearInterval(ticker);
+    msgEl.textContent = '⚠ Server unreachable — running local engine…';
+    msgEl.style.color = 'var(--amber)';
+
+    document.getElementById('live_name').value = name;
+    let sanctionsHits = [];
+    try { sanctionsHits = await runLiveSearch() || []; } catch(e) {}
+
+    const localData = {
+      nationality: payload.nationality, occupation: payload.occupation,
+      pep: String(payload.pep_status), pepJur: payload.pep_jurisdiction||'',
+      adverse: String(payload.adverse_media), sar: String(payload.prior_sar),
+      sof: payload.source_of_funds, sow: payload.source_of_wealth,
+      income: payload.income_bracket, txnVol: payload.transaction_volume,
+      bizIndustry: payload.business_industry, bizRole: payload.business_role,
+      relatedEntities: payload.related_entities||'', sanctionsHits
+    };
+    const risk = calcRisk(localData);
+
+    result = {
+      profile_id: 'LOCAL-' + Date.now().toString(36).toUpperCase().slice(-6),
+      name, risk_score: risk.score, risk_level: risk.level,
+      cdd_recommendation: {
+        LOW:    'Standard CDD. Proceed with onboarding.',
+        MEDIUM: 'Enhanced scrutiny required. Obtain additional documentation.',
+        HIGH:   'HIGH RISK — Do NOT proceed without senior management approval.'
+      }[risk.level],
+      screened_at: new Date().toISOString(),
+      flags: risk.flags.map(f => ({ level: f.level, message: f.msg, rule: 'LOCAL' })),
+      sanctions_hits: sanctionsHits.map(h => ({
+        matched_name: h.matchName, source: h.source,
+        source_label: h.sourceLabel, program: h.program||'',
+        countries: h.countries||'', similarity: h.similarity,
+        is_confirmed_hit: h.isHit
+      })),
+      sanctions_clear: sanctionsHits.length === 0,
+      pep_detected: payload.pep_status > 0,
+      requires_edd: risk.level === 'HIGH',
+      requires_str: sanctionsHits.some(h=>h.isHit),
+      sources_checked: ['OFAC SDN (local)', 'UN SC (local)', 'MAS (local)'],
+      analyst_notes: payload.notes || ''
+    };
+  }
+
+  clearInterval(ticker);
+
+  // Map API response to local profile format
+  const profile = {
+    id:               result.profile_id,
+    name:             result.name,
+    type:             payload.entity_type,
+    dob:              payload.dob || '',
+    idNumber:         payload.id_number || '',
+    nationality:      payload.nationality,
+    occupation:       payload.occupation,
+    address:          payload.address || '',
+    contact:          document.getElementById('f_contact').value,
+    sof:              payload.source_of_funds,
+    sow:              payload.source_of_wealth,
+    income:           payload.income_bracket,
+    txnVol:           payload.transaction_volume,
+    pep:              String(payload.pep_status),
+    pepJur:           payload.pep_jurisdiction || '',
+    adverse:          String(payload.adverse_media),
+    sar:              String(payload.prior_sar),
+    bizName:          payload.business_name || '',
+    bizReg:           payload.business_reg || '',
+    bizRole:          payload.business_role,
+    bizIndustry:      payload.business_industry,
+    relatedEntities:  payload.related_entities || '',
+    notes:            result.analyst_notes,
+    riskScore:        result.risk_score,
+    riskLevel:        result.risk_level,
+    cddRecommendation:result.cdd_recommendation,
+    flags:            result.flags.map(f => ({ level: f.level, msg: f.message })),
+    sanctionsHits:    result.sanctions_hits.map(h => ({
+                        matchName: h.matched_name, source: h.source,
+                        sourceLabel: h.source_label, program: h.program,
+                        countries: h.countries, similarity: h.similarity,
+                        isHit: h.is_confirmed_hit
+                      })),
+    pepDetected:      result.pep_detected,
+    requiresEdd:      result.requires_edd,
+    requiresStr:      result.requires_str,
+    sourcesChecked:   result.sources_checked,
+    screened:         result.screened_at,
+    analyst:          'EDMUND KER',
+    screenedVia:      usedFallback ? 'LOCAL FALLBACK' : 'CLOUD API'
+  };
+
+  profiles.unshift(profile);
+  save();
+
+  const hitCount = (profile.sanctionsHits||[]).filter(h=>h.isHit).length;
+  addAudit(`[${profile.screenedVia}] Screening: ${profile.name} (${profile.id}) — ${profile.riskLevel} (${profile.riskScore}/100) | Sanctions: ${hitCount} hit(s)`);
+  updateBadges();
+
+  btn.disabled = false;
+  btn.textContent = '▶ RUN FULL SCREENING';
+  progEl.style.display = 'none';
+  msgEl.textContent = '';
+  msgEl.style.color = 'var(--accent)';
+
+  const toastType = profile.riskLevel === 'HIGH' || hitCount > 0 ? 'error' : profile.riskLevel === 'MEDIUM' ? 'info' : 'success';
+  const via = usedFallback ? ' (local fallback)' : ' (cloud)';
+  toast(`${profile.riskLevel} RISK — Score ${profile.riskScore}/100${hitCount>0?' · '+hitCount+' sanctions hit(s)':''}${via}`, toastType);
+
+  clearForm();
+  showView('customers');
+}
+
+function clearForm() {
+  ['f_name','f_dob','f_id','f_addr','f_contact','f_pepjur','f_biz','f_bizreg','f_related','f_notes'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('live_results').innerHTML = '';
+  document.getElementById('live_status_txt').textContent = 'Enter name above to run live sanctions check';
+  document.getElementById('live_status_txt').style.color = 'var(--muted)';
+}
+
+// ─────────────────────────────────────────────
+// RENDER TABLES
+// ─────────────────────────────────────────────
+function renderTable(data) {
+  const tb = document.getElementById('cx_tbody');
+  if (!data.length) { tb.innerHTML = '<tr><td colspan="10"><div class="empty"><div class="eico">◉</div>No profiles yet</div></td></tr>'; return; }
+  tb.innerHTML = data.map(p => {
+    const hits = (p.sanctionsHits||[]).filter(h=>h.isHit);
+    const potl = (p.sanctionsHits||[]).filter(h=>!h.isHit);
+    const sanctBadge = hits.length ? `<span class="badge bf bd">HIT (${hits.length})</span>` :
+                       potl.length ? `<span class="badge be bd">POTENTIAL</span>` :
+                       `<span class="badge bp bd">CLEAR</span>`;
+    const pepBadge = +p.pep > 0 ? `<span class="badge be bd">${['','PEP','FORMER PEP','PEP ASSOC'][+p.pep]}</span>` : `<span class="badge bp bd">NO</span>`;
+    return `<tr>
+      <td class="mono" style="font-size:.62rem;color:var(--dim)">${p.id}</td>
+      <td><strong>${p.name}</strong><div style="font-size:.65rem;color:var(--muted)">${p.type}</div></td>
+      <td style="color:var(--muted);font-size:.75rem">${p.nationality}</td>
+      <td style="font-size:.75rem">${p.occupation.split('/')[0].trim()}</td>
+      <td><div style="display:flex;align-items:center;gap:.45rem"><div class="rb"><div class="rf" style="width:${p.riskScore}%;background:${p.riskLevel==='LOW'?'var(--green)':p.riskLevel==='MEDIUM'?'var(--amber)':'var(--red)'}"></div></div><span class="mono" style="font-size:.68rem">${p.riskScore}</span></div></td>
+      <td>${rBadge(p.riskLevel)}</td>
+      <td>${sanctBadge}</td>
+      <td>${pepBadge}</td>
+      <td class="mono" style="font-size:.6rem;color:var(--muted)">${fmt(p.screened)}</td>
+      <td><div style="display:flex;gap:.35rem">
+        <button class="btn btn-g btn-sm" onclick="openDetail('${p.id}')">VIEW</button>
+        <button class="btn btn-r btn-sm" onclick="delProfile('${p.id}')">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderHighRisk() {
+  const data = profiles.filter(p => p.riskLevel === 'HIGH');
+  const tb = document.getElementById('hr_tbody');
+  if (!data.length) { tb.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="eico">⚠</div>No high-risk profiles</div></td></tr>'; return; }
+  tb.innerHTML = data.map(p => {
+    const primary = (p.flags||[]).find(f=>f.level==='critical');
+    const hits = (p.sanctionsHits||[]).filter(h=>h.isHit);
+    return `<tr>
+      <td class="mono" style="font-size:.62rem;color:var(--dim)">${p.id}</td>
+      <td><strong>${p.name}</strong></td>
+      <td><div style="display:flex;align-items:center;gap:.45rem"><div class="rb"><div class="rf" style="width:${p.riskScore}%;background:var(--red)"></div></div><span class="mono" style="font-size:.68rem">${p.riskScore}</span></div></td>
+      <td style="font-size:.72rem;color:var(--amber)">${primary?primary.msg:'—'}</td>
+      <td>${hits.length?`<span class="badge bf bd">HIT (${hits.length})</span>`:'<span class="badge bn bd">NONE</span>'}</td>
+      <td>${+p.pep>0?`<span class="badge be bd">PEP</span>`:'<span class="badge bn">—</span>'}</td>
+      <td><button class="btn btn-p btn-sm" onclick="openDetail('${p.id}')">REVIEW</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderSanctionsHits() {
+  const data = profiles.filter(p => p.sanctionsHits && p.sanctionsHits.length > 0);
+  const tb = document.getElementById('sanc_tbody');
+  if (!data.length) { tb.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="eico">🚫</div>No sanctions hits</div></td></tr>'; return; }
+  const rows = [];
+  for (const p of data) {
+    for (const h of p.sanctionsHits) {
+      rows.push(`<tr>
+        <td class="mono" style="font-size:.62rem;color:var(--dim)">${p.id}</td>
+        <td><strong>${p.name}</strong></td>
+        <td>${h.isHit?'<span class="badge bf bd">CONFIRMED HIT</span>':'<span class="badge be bd">POTENTIAL</span>'}</td>
+        <td><span class="mono" style="font-size:.68rem;color:var(--accent)">${h.sourceLabel}</span></td>
+        <td style="font-size:.75rem">${h.matchName}</td>
+        <td><div style="display:flex;align-items:center;gap:.4rem"><div class="rb"><div class="rf" style="width:${p.riskScore}%;background:var(--red)"></div></div><span class="mono" style="font-size:.68rem">${p.riskScore}</span></div></td>
+        <td><button class="btn btn-p btn-sm" onclick="openDetail('${p.id}')">VIEW</button></td>
+      </tr>`);
+    }
+  }
+  tb.innerHTML = rows.join('');
+}
+
+function renderEntities() {
+  const container = document.getElementById('entity_list');
+  const withBiz = profiles.filter(p => p.bizName);
+  if (!withBiz.length) { container.innerHTML = '<div class="empty"><div class="eico">◈</div>No linked entities</div>'; return; }
+  container.innerHTML = withBiz.map(p => `
+    <div class="card" style="margin-bottom:.75rem">
+      <div class="ct">${p.name} — CORPORATE STRUCTURE</div>
+      <div class="en" onclick="openDetail('${p.id}')"><div class="ei person">👤</div><div><div style="font-size:.82rem;font-weight:500">${p.name} ${rBadge(p.riskLevel)}</div><div style="font-family:var(--font-mono);font-size:.6rem;color:var(--muted)">${p.type} · ${p.nationality} · Score: ${p.riskScore}</div></div></div>
+      ${p.bizName.split(',').map(b=>`<div style="margin-left:1.25rem;border-left:2px solid var(--border);padding-left:.65rem"><div class="en"><div class="ei company">🏢</div><div><div style="font-size:.82rem;font-weight:500">${b.trim()}</div><div style="font-family:var(--font-mono);font-size:.6rem;color:var(--muted)">${p.bizIndustry} · ${p.bizRole} · Reg: ${p.bizReg||'N/A'}</div></div></div></div>`).join('')}
+      ${p.relatedEntities?`<div style="margin-top:.45rem;padding:.5rem .7rem;font-size:.7rem;color:var(--muted);border:1px dashed var(--border)">${p.relatedEntities}</div>`:''}
+    </div>`).join('');
+}
+
+function renderDashboard() {
+  document.getElementById('d_total').textContent = profiles.length;
+  document.getElementById('d_low').textContent   = profiles.filter(p=>p.riskLevel==='LOW').length;
+  document.getElementById('d_med').textContent   = profiles.filter(p=>p.riskLevel==='MEDIUM').length;
+  document.getElementById('d_high').textContent  = profiles.filter(p=>p.riskLevel==='HIGH').length;
+  const recent = profiles.slice(0,6);
+  if (!recent.length) { document.getElementById('d_recent').innerHTML = '<div class="empty"><div class="eico">◈</div>No profiles yet</div>'; return; }
+  document.getElementById('d_recent').innerHTML = recent.map(p => {
+    const hits = (p.sanctionsHits||[]).filter(h=>h.isHit);
+    return `<div class="ae">
+      <div class="at">${fmt(p.screened)}</div>
+      <div class="am"><strong>${p.name}</strong> ${rBadge(p.riskLevel)} Score: <span class="mono">${p.riskScore}/100</span>${hits.length?` <span class="badge bf bd">SANCTIONS HIT</span>`:''}</div>
+      <div class="au">${p.analyst}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+// DETAIL MODAL
+// ─────────────────────────────────────────────
+function openDetail(id) {
+  const p = profiles.find(x => x.id === id);
+  if (!p) return;
+  activeId = id;
+  document.getElementById('modal_title').textContent = `PROFILE — ${p.name} (${p.id})`;
+  document.getElementById('btn_override').style.display = p.riskLevel !== 'HIGH' ? 'inline-flex' : 'none';
+
+  const rl = p.riskLevel.toLowerCase();
+  const hits = (p.sanctionsHits||[]).filter(h=>h.isHit);
+  const potential = (p.sanctionsHits||[]).filter(h=>!h.isHit);
+
+  const riskMsg = {
+    LOW: 'Standard CDD — proceed with onboarding. Apply ongoing monitoring per policy.',
+    MEDIUM: 'Enhanced scrutiny required. Obtain additional documentation and senior sign-off.',
+    HIGH: 'HIGH RISK — Do NOT proceed without senior management approval. Consider STR/SAR filing.'
+  }[p.riskLevel];
+
+  const flagsHtml = (p.flags||[]).map(f=>`
+    <div class="fi ${f.level}">
+      <span>${{critical:'🔴',warning:'🟡',info:'🔵'}[f.level]}</span>
+      <span>${f.msg}</span>
+    </div>`).join('') || '<div style="color:var(--muted);font-size:.75rem">No risk flags identified</div>';
+
+  const sanctHtml = hits.length ? hits.map(h=>`
+    <div class="match-card hit"><div class="match-name hit">🚫 ${h.matchName}</div>
+    <div class="match-meta"><span class="match-tag" style="color:var(--red)">${h.sourceLabel}</span>${h.program?`<span class="match-tag">${h.program}</span>`:''}</div></div>`).join('')
+    : potential.length ? potential.map(h=>`
+    <div class="match-card potential"><div class="match-name potential">⚠ ${h.matchName}</div>
+    <div class="match-meta"><span class="match-tag" style="color:var(--amber)">${h.sourceLabel}</span></div></div>`).join('')
+    : '<div class="match-card clear"><div class="match-name clear">✓ CLEAR — No sanctions matches</div></div>';
+
+  document.getElementById('modal_body').innerHTML = `
+    <div class="cdd-box ${rl}">
+      <div class="cdd-ico">${{LOW:'🟢',MEDIUM:'🟡',HIGH:'🔴'}[p.riskLevel]}</div>
+      <div><div class="cdd-verdict ${rl}">${p.riskLevel} RISK</div><div class="cdd-sub">${riskMsg}</div></div>
+    </div>
+    <div class="rc-wrap">
+      <div class="rc ${rl}"><div class="rscore">${p.riskScore}</div><div class="rlabel">/ 100</div></div>
+      <div>
+        <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em">Overall Risk Rating</div>
+        <div style="font-size:1.1rem;font-weight:600;margin:.25rem 0">${rBadge(p.riskLevel)}</div>
+        <div style="font-size:.72rem;color:var(--muted)">Screened: ${fmt(p.screened)} · Analyst: ${p.analyst}</div>
+        <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--muted);margin-top:.3rem">Sanctions: ${hits.length?`<span style="color:var(--red)">${hits.length} HIT(S)</span>`:potential.length?`<span style="color:var(--amber)">${potential.length} POTENTIAL</span>`:'<span style="color:var(--green)">CLEAR</span>'}</div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab(this,'tab_profile')">PROFILE</div>
+      <div class="tab" onclick="switchTab(this,'tab_financial')">FINANCIAL</div>
+      <div class="tab" onclick="switchTab(this,'tab_sanctions')">SANCTIONS (${(p.sanctionsHits||[]).length})</div>
+      <div class="tab" onclick="switchTab(this,'tab_flags')">FLAGS (${(p.flags||[]).length})</div>
+      <div class="tab" onclick="switchTab(this,'tab_entities')">ENTITIES</div>
+    </div>
+    <div class="tab-panel active" id="tab_profile">
+      <div class="dg">
+        <div class="df"><div class="dl">Full Name</div><div class="dv">${p.name}</div></div>
+        <div class="df"><div class="dl">Entity Type</div><div class="dv">${p.type}</div></div>
+        <div class="df"><div class="dl">DOB / Incorporation</div><div class="dv">${p.dob||'—'}</div></div>
+        <div class="df"><div class="dl">ID / NRIC / UEN</div><div class="dv mono">${p.idNumber||'—'}</div></div>
+        <div class="df"><div class="dl">Nationality</div><div class="dv">${p.nationality}</div></div>
+        <div class="df"><div class="dl">Occupation</div><div class="dv">${p.occupation}</div></div>
+        <div class="df"><div class="dl">Address</div><div class="dv">${p.address||'—'}</div></div>
+        <div class="df"><div class="dl">Contact</div><div class="dv">${p.contact||'—'}</div></div>
+        <div class="df"><div class="dl">PEP Status</div><div class="dv">${['None','Current PEP','Former PEP','PEP Associate'][+p.pep]}${p.pepJur?' — '+p.pepJur:''}</div></div>
+        <div class="df"><div class="dl">Adverse Media</div><div class="dv">${['None','Minor','Confirmed','Criminal'][+p.adverse]}</div></div>
+        <div class="df"><div class="dl">Prior SAR/STR</div><div class="dv">${['No','Yes — Prior Inst.','Yes — This Inst.'][+p.sar]}</div></div>
+        ${p.notes?`<div class="df" style="grid-column:1/-1"><div class="dl">Analyst Notes</div><div class="dv" style="font-size:.75rem;color:var(--muted)">${p.notes}</div></div>`:''}
+      </div>
+    </div>
+    <div class="tab-panel" id="tab_financial">
+      <div class="dg">
+        <div class="df"><div class="dl">Source of Funds</div><div class="dv">${p.sof}</div></div>
+        <div class="df"><div class="dl">Source of Wealth</div><div class="dv">${p.sow}</div></div>
+        <div class="df"><div class="dl">Annual Income</div><div class="dv">${p.income}</div></div>
+        <div class="df"><div class="dl">Transaction Volume</div><div class="dv">${p.txnVol}</div></div>
+      </div>
+    </div>
+    <div class="tab-panel" id="tab_sanctions">
+      <div style="margin-bottom:.75rem;font-size:.72rem;color:var(--muted)">Live screening results from OFAC SDN · UN Security Council · EU FSF · MAS</div>
+      ${sanctHtml}
+    </div>
+    <div class="tab-panel" id="tab_flags"><div class="flag-list">${flagsHtml}</div></div>
+    <div class="tab-panel" id="tab_entities">
+      <div style="margin-bottom:.6rem;font-size:.72rem;color:var(--muted)">Corporate relationships and beneficial ownership</div>
+      ${p.bizName ? `<div class="en"><div class="ei person">👤</div><div><div style="font-size:.8rem;font-weight:500">${p.name}</div><div class="mono" style="font-size:.6rem;color:var(--muted)">${p.type} · ${p.bizRole}</div></div></div>
+      ${p.bizName.split(',').map(b=>`<div style="margin-left:1.2rem;border-left:2px solid var(--border);padding-left:.6rem"><div class="en"><div class="ei company">🏢</div><div><div style="font-size:.8rem;font-weight:500">${b.trim()}</div><div class="mono" style="font-size:.6rem;color:var(--muted)">${p.bizIndustry} · Reg: ${p.bizReg||'N/A'}</div></div></div></div>`).join('')}
+      ${p.relatedEntities?`<div style="margin-top:.5rem;padding:.5rem .7rem;font-size:.7rem;color:var(--muted);border:1px dashed var(--border);white-space:pre-wrap">${p.relatedEntities}</div>`:''}` : '<div style="color:var(--muted);font-size:.75rem">No associated entities</div>'}
+    </div>
+  `;
+  document.getElementById('modal_detail').classList.add('active');
+  addAudit(`Profile viewed: ${p.name} (${p.id})`);
+}
+
+function switchTab(el, panelId) {
+  const ctx = el.closest('.mb, .view');
+  ctx.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  ctx.querySelectorAll('.tab-panel').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(panelId).classList.add('active');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+function overrideHigh() {
+  const p = profiles.find(x=>x.id===activeId);
+  if (!p) return;
+  if (!confirm(`Escalate ${p.name} to HIGH RISK?\nThis will be logged in the audit trail.`)) return;
+  p.riskLevel = 'HIGH'; p.riskScore = Math.max(p.riskScore, 65);
+  p.flags = p.flags || [];
+  p.flags.unshift({level:'critical', msg:'MANUAL HIGH RISK ESCALATION by analyst'});
+  save(); updateBadges();
+  addAudit(`Manual HIGH RISK escalation: ${p.name} (${p.id})`);
+  toast('Escalated to HIGH RISK', 'error');
+  closeModal('modal_detail');
+  renderTable(profiles);
+}
+
+function delProfile(id) {
+  const p = profiles.find(x=>x.id===id);
+  if (!confirm(`Delete profile for ${p?.name}? Cannot be undone.`)) return;
+  profiles = profiles.filter(x=>x.id!==id);
+  save(); updateBadges();
+  addAudit(`Profile deleted: ${p?.name} (${id})`);
+  renderTable(profiles);
+  toast('Profile deleted', 'info');
+}
+
+// ─────────────────────────────────────────────
+// EXPORT
+// ─────────────────────────────────────────────
+function exportProfileReport() {
+  const p = profiles.find(x=>x.id===activeId);
+  if (!p) return;
+  const hits = (p.sanctionsHits||[]).filter(h=>h.isHit);
+  const rows = [
+    'Field,Value',
+    `Profile ID,${p.id}`,`Name,${p.name}`,`Type,${p.type}`,`DOB,${p.dob||''}`,`ID Number,${p.idNumber||''}`,
+    `Nationality,${p.nationality}`,`Occupation,${p.occupation}`,
+    `Source of Funds,${p.sof}`,`Source of Wealth,${p.sow}`,`Income,${p.income}`,`Transaction Volume,${p.txnVol}`,
+    `PEP Status,${['None','Current PEP','Former PEP','PEP Associate'][+p.pep]}${p.pepJur?' ('+p.pepJur+')':''}`,
+    `Adverse Media,${['None','Minor','Confirmed','Criminal'][+p.adverse]}`,
+    `Prior SAR/STR,${['No','Yes-Prior','Yes-This'][+p.sar]}`,
+    `Business Names,"${p.bizName||''}"`,`Business Reg,${p.bizReg||''}`,`Business Role,${p.bizRole}`,
+    `Business Industry,${p.bizIndustry}`,`Related Entities,"${p.relatedEntities||''}"`,
+    `Risk Score,${p.riskScore}`,`Risk Level,${p.riskLevel}`,
+    `Sanctions Hits,${hits.length}`,`Sanctions Detail,"${hits.map(h=>h.sourceLabel+': '+h.matchName).join('; ')}"`,
+    `Risk Flags,"${(p.flags||[]).map(f=>'['+f.level.toUpperCase()+'] '+f.msg).join('; ')}"`,
+    `Screened,${fmt(p.screened)}`,`Analyst,${p.analyst}`,
+    `Notes,"${p.notes||''}"`
+  ];
+  dlCSV(rows.join('\n'), `CDD_${p.id}_${p.name.replace(/\s+/g,'_')}.csv`);
+  addAudit(`Report exported: ${p.name} (${p.id})`);
+  toast('Report exported', 'success');
+}
+
+function exportAllCSV() {
+  if (!profiles.length) { toast('No profiles to export', 'error'); return; }
+  const hdrs = 'ID,Name,Type,Nationality,Occupation,Risk Score,Risk Level,Sanctions Hits,PEP,SOF,SOW,Income,Txn Volume,Screened,Analyst';
+  const rows = profiles.map(p => {
+    const hits = (p.sanctionsHits||[]).filter(h=>h.isHit);
+    return `"${p.id}","${p.name}","${p.type}","${p.nationality}","${p.occupation}","${p.riskScore}","${p.riskLevel}","${hits.length}","${['None','PEP','Former PEP','PEP Assoc'][+p.pep]}","${p.sof}","${p.sow}","${p.income}","${p.txnVol}","${fmt(p.screened)}","${p.analyst}"`;
+  });
+  dlCSV([hdrs,...rows].join('\n'), `AML_Profiles_${new Date().toISOString().slice(0,10)}.csv`);
+  toast(`Exported ${profiles.length} profiles`, 'success');
+  addAudit(`Bulk export: ${profiles.length} profiles`);
+}
+
+function exportAuditCSV() {
+  if (!auditLog.length) { toast('No audit entries', 'error'); return; }
+  const rows = ['Time,Action,Analyst', ...auditLog.map(e=>`"${fmt(e.time)}","${e.msg}","${e.user}"`)];
+  dlCSV(rows.join('\n'), `AML_Audit_${new Date().toISOString().slice(0,10)}.csv`);
+  toast('Audit log exported', 'success');
+}
+
+function dlCSV(content, filename) {
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(content);
+  a.download = filename; a.click();
+}
+
+// ─────────────────────────────────────────────
+// AUDIT
+// ─────────────────────────────────────────────
+function addAudit(msg) {
+  auditLog.unshift({time: new Date().toISOString(), msg, user:'EDMUND KER'});
+  if (auditLog.length > 500) auditLog.pop();
+  localStorage.setItem('aml2_audit', JSON.stringify(auditLog));
+}
+
+function renderAudit() {
+  const container = document.getElementById('audit_log');
+  if (!auditLog.length) { container.innerHTML = '<div class="empty"><div class="eico">≡</div>No entries</div>'; return; }
+  container.innerHTML = auditLog.map(e=>`
+    <div class="ae"><div class="at">${fmt(e.time)}</div><div class="am">${e.msg}</div><div class="au">${e.user}</div></div>`).join('');
+}
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+function rBadge(level) {
+  const map = {LOW:'bl',MEDIUM:'bm',HIGH:'bh'};
+  return `<span class="badge ${map[level]||'bn'} bd">${level}</span>`;
+}
+
+function fmt(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-SG') + ' ' + d.toLocaleTimeString('en-SG',{hour:'2-digit',minute:'2-digit'});
+}
+
+function updateBadges() {
+  const high = profiles.filter(p=>p.riskLevel==='HIGH').length;
+  const sanc = profiles.filter(p=>(p.sanctionsHits||[]).some(h=>h.isHit)).length;
+  const nb_h = document.getElementById('nb_high');
+  const nb_s = document.getElementById('nb_sanc');
+  nb_h.textContent = high; nb_h.style.display = high ? 'inline' : 'none';
+  nb_s.textContent = sanc; nb_s.style.display = sanc ? 'inline' : 'none';
+}
+
+function save() {
+  localStorage.setItem('aml2_profiles', JSON.stringify(profiles));
+}
+
+function filterCx(q) {
+  const f = profiles.filter(p =>
+    p.name.toLowerCase().includes(q.toLowerCase()) ||
+    p.id.toLowerCase().includes(q.toLowerCase()) ||
+    (p.bizName && p.bizName.toLowerCase().includes(q.toLowerCase()))
+  );
+  renderTable(f);
+}
+
+function toast(msg, type='info') {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${{success:'✓',error:'✕',info:'◈'}[type]||'◈'}</span>${msg}`;
+  c.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateX(18px)'; t.style.transition='.25s'; setTimeout(()=>t.remove(),300); }, 3500);
+}
+
+// ─────────────────────────────────────────────
+// CHARTS
+// ─────────────────────────────────────────────
+const chartInstances = {};
+
+const CHART_DEFAULTS = {
+  color: 'rgba(200,216,232,0.85)',
+  gridColor: 'rgba(30,42,54,0.8)',
+  tickFont: { family: "'IBM Plex Mono', monospace", size: 10 },
+  legendFont: { family: "'IBM Plex Mono', monospace", size: 10 },
+};
+
+function destroyChart(id) {
+  if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+}
+
+function makeChart(id, config) {
+  destroyChart(id);
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  chartInstances[id] = new Chart(ctx, config);
+}
+
+function renderCharts() {
+  if (!profiles.length) {
+    document.getElementById('charts_empty').style.display = 'flex';
+    return;
+  }
+  document.getElementById('charts_empty').style.display = 'none';
+  document.getElementById('chart_risk_total').textContent = profiles.length;
+
+  // ── 1. RISK LEVEL DONUT ──
+  const low = profiles.filter(p=>p.riskLevel==='LOW').length;
+  const med = profiles.filter(p=>p.riskLevel==='MEDIUM').length;
+  const high = profiles.filter(p=>p.riskLevel==='HIGH').length;
+  makeChart('chart_risk_donut', {
+    type: 'doughnut',
+    data: {
+      labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+      datasets: [{
+        data: [low, med, high],
+        backgroundColor: ['rgba(0,232,120,0.75)', 'rgba(255,176,32,0.75)', 'rgba(255,56,80,0.75)'],
+        borderColor: ['#00e878','#ffb020','#ff3850'],
+        borderWidth: 1.5,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { position: 'bottom', labels: { color: CHART_DEFAULTS.color, font: CHART_DEFAULTS.legendFont, padding: 14, boxWidth: 10 }},
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} (${profiles.length ? Math.round(ctx.raw/profiles.length*100) : 0}%)` }}
+      }
+    }
+  });
+
+  // ── 2. RISK SCORE HISTOGRAM ──
+  const bins = [0,0,0,0,0,0,0,0,0,0]; // 0-9,10-19,...,90-99+
+  profiles.forEach(p => { const b = Math.min(Math.floor(p.riskScore/10), 9); bins[b]++; });
+  const binColors = bins.map((_, i) => {
+    const pct = i/9;
+    if (pct < 0.35) return 'rgba(0,232,120,0.7)';
+    if (pct < 0.65) return 'rgba(255,176,32,0.7)';
+    return 'rgba(255,56,80,0.7)';
+  });
+  makeChart('chart_score_hist', {
+    type: 'bar',
+    data: {
+      labels: ['0–9','10–19','20–29','30–39','40–49','50–59','60–69','70–79','80–89','90–100'],
+      datasets: [{
+        label: 'Profiles',
+        data: bins,
+        backgroundColor: binColors,
+        borderColor: binColors.map(c=>c.replace('0.7','1')),
+        borderWidth: 1,
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw} profile(s)` }}},
+      scales: {
+        x: { ticks: { color: CHART_DEFAULTS.color, font: CHART_DEFAULTS.tickFont }, grid: { color: CHART_DEFAULTS.gridColor }, title: { display: true, text: 'Risk Score Range', color: CHART_DEFAULTS.color, font: CHART_DEFAULTS.tickFont }},
+        y: { ticks: { color: CHART_DEFAULTS.color, font: CHART_DEFAULTS.tickFont, stepSize: 1 }, grid: { color: CHART_DEFAULTS.gridColor }, title: { display: true, text: 'Count', color: CHART_DEFAULTS.color, font: CHART_DEFAULTS.tickFont }, beginAtZero: true }
+      }
+    }
+  });
+
+  // ── 3. SANCTIONS PIE ──
+  const sConfirmed = profiles.filter(p=>(p.sanctionsHits||[]).some(h=>h.isHit)).length;
+  const sPotential = profiles.filter(p=>(p.sanctionsHits||[]).length>0 && !(p.sanctionsHits||[]).some(h=>h.isHit)).length;
+  const sClear = profiles.length - sConfirmed - sPotential;
+  makeChart('chart_sanctions_pie', {
+    type: 'pie',
+    data: {
+      labels: ['Confirmed Hit', 'Potential Match', 'Clear'],
+      datasets: [{
+        data: [sConfirmed, sPotential, sClear],
+        backgroundColor: ['rgba(255,56,80,0.8)','rgba(255,176,32,0.8)','rgba(0,232,120,0.7)'],
+        borderColor: ['#ff3850','#ffb020','#00e878'],
+        borderWidth: 1.5,
+        hoverOffset: 5,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: CHART_DEFAULTS.color, font: CHART_DEFAULTS.legendFont, padding: 12, boxWidth: 10 }},
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}` }}
+      }
+    }
+  });
+
+  // ── 4. PEP BAR ──
+  const pepCounts = [
+    profiles.filter(p=>+p.pep===0).length,
+    profiles.filter(p=>+p.pep===1).length,
+    profiles.filter(p=>+p.pep===2).length,
+    profiles.filter(p=>+p.pep===3).length,
+  ];
+  makeChart('chart_pep_bar', {
+    type: 'bar',
+    data: {
+      labels: ['Not PEP', 'Current PEP', 'Former PEP', 'PEP Associate'],
+      datasets: [{
+        label: 'Profiles',
+        data: pepCounts,
+        backgroundColor: ['rgba(0,200,255,0.6)','rgba(255,56,80,0.8)','rgba(255,176,32,0.7)','rgba(160,96,255,0.7)'],
+        borderColor: ['#00c8ff','#ff3850','#ffb020','#a060ff'],
+        borderWidth: 1.5,
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw} profile(s)` }}},
+      scales: {
+        x: { ticks: { color: CHART_DEFAULTS.color, font: CHART_DEFAULTS.tickFont, stepSize: 1 }, grid: { color: CHART_DEFAULTS.gridColor }, beginAtZero: true },
+        y: { ticks: { color: CHART_DEFAULTS.color, font: CHART_DEFAULTS.tickFont }, grid: { color: 'transparent' }}
+      }
+    }
+  });
+
+  // ── 5. NATIONALITY TOP 7 ──
+  const natCount = {};
+  profiles.forEach(p => { natCount[p.nationality] = (natCount[p.nationality]||0)+1; });
+  const natSorted = Object.entries(natCount).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  const natColors = ['#00c8ff','#00e878','#ffb020','#ff3850','#a060ff','#00aadd','#88cc44'];
+  makeChart('chart_nationality', {
+    type: 'bar',
+    data: {
+      labels: natSorted.map(e=>e[0]),
+      datasets: [{
+        label: 'Profiles',
+        data: natSorted.map(e=>e[1]),
+        backgroundColor: natSorted.map((_,i)=>natColors[i%natColors.length].replace('#','rgba(').replace(/^rgba\(([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})\)$/, (_,r,g,b)=>`rgba(${parseInt(r,16)},${parseInt(g,16)},${parseInt(b,16)},0.7)`)),
+        borderWidth: 1,
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: { legend: { display: false }},
+      scales: {
+        x: { ticks: { color: CHART_DEFAULTS.color, font: CHART_DEFAULTS.tickFont, stepSize: 1 }, grid: { color: CHART_DEFAULTS.gridColor }, beginAtZero: true },
+        y: { ticks: { color: CHART_DEFAULTS.color, font: CHART_DEFAULTS.tickFont }, grid: { color: 'transparent' }}
+      }
+    }
+  });
+
+  // ── 6. OCCUPATION TOP 6 ──
+  const occCount = {};
+  profiles.forEach(p => { const short = p.occupation.split('/')[0].split('&')[0].trim(); occCount[short] = (occCount[short]||0)+1; });
+  const occSorted = Object.entries(occCount).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  makeChart('chart_occupation', {
+    type: 'bar',
+    data: {
+      labels: occSorted.map(e=>e[0]),
+      datasets: [{
+        label: 'Profiles',
+        data: occSorted.map(e=>e[1]),
+        backgroundColor: 'rgba(0,200,255,0.55)',
+        borderColor: '#00c8ff',
+        borderWidth: 1.5,
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: { legend: { display: false }},
+      scales: {
+        x: { ticks: { color: CHART_DEFAULTS.color, font: CHART_DEFAULTS.tickFont, stepSize: 1 }, grid: { color: CHART_DEFAULTS.gridColor }, beginAtZero: true },
+        y: { ticks: { color: CHART_DEFAULTS.color, font: CHART_DEFAULTS.tickFont }, grid: { color: 'transparent' }}
+      }
+    }
+  });
+
+  // ── 7. SCREENINGS OVER TIME (line chart by date) ──
+  const dayCount = {};
+  profiles.forEach(p => {
+    const d = new Date(p.screened).toLocaleDateString('en-SG',{day:'2-digit',month:'short'});
+    dayCount[d] = (dayCount[d]||0)+1;
+  });
+  const dayEntries = Object.entries(dayCount).slice(-14).reverse();
+  makeChart('chart_timeline', {
+    type: 'line',
+    data: {
+      labels: dayEntries.map(e=>e[0]),
+      datasets: [{
+        label: 'Screenings',
+        data: dayEntries.map(e=>e[1]),
+        borderColor: '#00c8ff',
+        backgroundColor: 'rgba(0,200,255,0.08)',
+        pointBackgroundColor: '#00c8ff',
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        borderWidth: 2,
+        fill: true,
+        tension: 0.35,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw} screening(s)` }}},
+      scales: {
+        x: { ticks: { color: CHART_DEFAULTS.color, font: CHART_DEFAULTS.tickFont }, grid: { color: CHART_DEFAULTS.gridColor }},
+        y: { ticks: { color: CHART_DEFAULTS.color, font: CHART_DEFAULTS.tickFont, stepSize: 1 }, grid: { color: CHART_DEFAULTS.gridColor }, beginAtZero: true }
+      }
+    }
+  });
+
+  // ── 8. TOP RISK FLAGS ──
+  const flagCount = {};
+  profiles.forEach(p => {
+    (p.flags||[]).forEach(f => {
+      const short = f.msg.length > 45 ? f.msg.slice(0,45)+'…' : f.msg;
+      flagCount[short] = (flagCount[short]||0)+1;
+    });
+  });
+  const flagSorted = Object.entries(flagCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const flagColors = flagSorted.map(([k]) => {
+    if (k.toLowerCase().includes('sanction') || k.toLowerCase().includes('criminal') || k.toLowerCase().includes('str')) return 'rgba(255,56,80,0.75)';
+    if (k.toLowerCase().includes('pep') || k.toLowerCase().includes('income') || k.toLowerCase().includes('unknown')) return 'rgba(255,176,32,0.75)';
+    return 'rgba(0,200,255,0.6)';
+  });
+  makeChart('chart_flags', {
+    type: 'bar',
+    data: {
+      labels: flagSorted.map(e=>e[0]),
+      datasets: [{
+        label: 'Occurrences',
+        data: flagSorted.map(e=>e[1]),
+        backgroundColor: flagColors,
+        borderColor: flagColors.map(c=>c.replace('0.75','1').replace('0.6','1')),
+        borderWidth: 1,
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw} occurrence(s)` }}},
+      scales: {
+        x: { ticks: { color: CHART_DEFAULTS.color, font: CHART_DEFAULTS.tickFont, stepSize: 1 }, grid: { color: CHART_DEFAULTS.gridColor }, beginAtZero: true },
+        y: { ticks: { color: CHART_DEFAULTS.color, font: { family:"'IBM Plex Mono',monospace", size: 9 } }, grid: { color: 'transparent' }}
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+// API CONFIG — save/load from localStorage
+// ─────────────────────────────────────────────
+function loadApiConfig() {
+  const saved = JSON.parse(localStorage.getItem('aml2_api_config') || '{}');
+  if (saved.url) { CLOUD_API.url = saved.url; document.getElementById('cfg_url').value = saved.url; }
+  if (saved.key) { CLOUD_API.key = saved.key; document.getElementById('cfg_key').value = saved.key; }
+}
+
+function saveApiConfig() {
+  const url = document.getElementById('cfg_url').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('cfg_key').value.trim();
+  if (!url || !key) { toast('Both URL and API key are required', 'error'); return; }
+  CLOUD_API.url = url;
+  CLOUD_API.key = key;
+  localStorage.setItem('aml2_api_config', JSON.stringify({ url, key }));
+  toast('API config saved', 'success');
+  addAudit('Cloud API configuration updated');
+}
+
+async function testApiConnection() {
+  const statusEl = document.getElementById('api_status');
+  const url = document.getElementById('cfg_url').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('cfg_key').value.trim();
+  statusEl.textContent = '⏳ Testing…';
+  statusEl.style.color = 'var(--muted)';
+  try {
+    const resp = await fetch(`${url}/health`, {
+      headers: { 'X-API-Key': key },
+      signal: AbortSignal.timeout(6000)
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      statusEl.textContent = `✓ ONLINE — v${data.version || '?'} · ${new Date(data.timestamp).toLocaleTimeString('en-SG')}`;
+      statusEl.style.color = 'var(--green)';
+      toast('Server connection successful', 'success');
+    } else {
+      statusEl.textContent = `✕ Server error ${resp.status}`;
+      statusEl.style.color = 'var(--red)';
+      toast(`Connection failed: HTTP ${resp.status}`, 'error');
+    }
+  } catch(e) {
+    statusEl.textContent = '✕ Could not reach server — check URL';
+    statusEl.style.color = 'var(--red)';
+    toast('Cannot reach server. Check URL and CORS settings.', 'error');
+  }
+}
+
+// ─────────────────────────────────────────────
+// WATCHLIST DB MANAGER
+// ─────────────────────────────────────────────
+const REASON_CODES = [
+  'BLACKLIST','PEP','SANCTIONS','ADVERSE_MEDIA','STR_FILED',
+  'FRAUD','SHELL_COMPANY','HIGH_RISK_JURISDICTION',
+  'NOMINEE_DIRECTOR','UBO_CONCEALMENT','DRUG_TRAFFICKING',
+  'TERRORISM_FINANCING','MONEY_LAUNDERING','INTERNAL_FLAG'
+];
+const TIER_COLORS = {
+  CRITICAL: 'var(--red)', HIGH: 'var(--red)',
+  MEDIUM: 'var(--amber)', LOW: 'var(--green)'
+};
+const TIER_BADGE = {
+  CRITICAL: 'bf', HIGH: 'bh', MEDIUM: 'bm', LOW: 'bl'
+};
+
+let wlDebounce = null;
+let activeWLId = null;
+let wlData = [];
+
+function showWLModal() {
+  // Build reason code checkboxes
+  const container = document.getElementById('reason_code_checkboxes');
+  container.innerHTML = REASON_CODES.map(rc => `
+    <label style="display:flex;align-items:center;gap:.35rem;font-family:var(--font-mono);font-size:.62rem;
+      color:var(--muted);cursor:pointer;padding:.25rem .5rem;border:1px solid var(--border);
+      border-radius:2px;transition:all .15s" onclick="this.classList.toggle('rc-active')" data-rc="${rc}">
+      <span class="rc-check" style="width:8px;height:8px;border:1px solid var(--border2);border-radius:1px;flex-shrink:0"></span>
+      ${rc}
+    </label>`).join('');
+  ['wl_name','wl_idnum','wl_caseref','wl_aliases','wl_linked','wl_notes','wl_reason']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('modal_wl_add').classList.add('active');
+}
+
+function getSelectedReasonCodes() {
+  return [...document.querySelectorAll('#reason_code_checkboxes label.rc-active')]
+    .map(el => el.dataset.rc);
+}
+
+async function submitWatchlistEntry() {
+  const name   = document.getElementById('wl_name').value.trim();
+  const reason = document.getElementById('wl_reason').value.trim();
+  const codes  = getSelectedReasonCodes();
+  if (!name)   { toast('Entity name is required', 'error'); return; }
+  if (!reason) { toast('Reason/narrative is required', 'error'); return; }
+
+  // Parse aliases
+  const aliasRaw = document.getElementById('wl_aliases').value;
+  const aliases  = aliasRaw ? aliasRaw.split(',').map(a=>a.trim()).filter(Boolean) : [];
+
+  // Parse linked entities (Name | Relationship | Ownership%)
+  const linkedRaw = document.getElementById('wl_linked').value;
+  const linked_entities = linkedRaw
+    ? linkedRaw.split('\n').map(line => {
+        const parts = line.split('|').map(p=>p.trim());
+        return parts[0] ? {
+          linked_name: parts[0],
+          relationship: parts[1] || 'Associated',
+          linked_type: 'INDIVIDUAL',
+          ownership_pct: parts[2] ? parseFloat(parts[2]) || null : null
+        } : null;
+      }).filter(Boolean)
+    : [];
+
+  const payload = {
+    entity_type:    document.getElementById('wl_type').value,
+    full_name:      name,
+    risk_tier:      document.getElementById('wl_tier').value,
+    id_number:      document.getElementById('wl_idnum').value || null,
+    nationality:    document.getElementById('wl_nationality').value,
+    reason_codes:   codes,
+    reason_text:    reason,
+    source:         document.getElementById('wl_source').value,
+    case_reference: document.getElementById('wl_caseref').value || null,
+    notes:          document.getElementById('wl_notes').value || null,
+    aliases, linked_entities
+  };
+
+  const btn = document.querySelector('[onclick="submitWatchlistEntry()"]');
+  btn.disabled = true; btn.textContent = '⏳ ADDING…';
+
+  try {
+    const resp = await fetch(`${CLOUD_API.url}/watchlist`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'X-API-Key': CLOUD_API.key },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!resp.ok) throw new Error(`Server ${resp.status}`);
+    const data = await resp.json();
+    toast(`Entity added: ${name} (${payload.risk_tier} RISK)`, 'success');
+    addAudit(`Watchlist entry added: ${name} (${payload.risk_tier}) — ${codes.join(', ')}`);
+    closeModal('modal_wl_add');
+    loadWatchlist();
+  } catch(e) {
+    toast(`Failed to add entry: ${e.message}`, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '▶ ADD TO WATCHLIST';
+  }
+}
+
+async function loadWatchlist() {
+  const tier = document.getElementById('wl_filter_tier').value;
+  const type = document.getElementById('wl_filter_type').value;
+  const tbody = document.getElementById('wl_tbody');
+  tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="eico" style="font-size:1rem">⏳</div>Loading from Supabase…</div></td></tr>`;
+
+  const params = new URLSearchParams({ limit: 200 });
+  if (tier) params.append('risk_tier', tier);
+  if (type) params.append('entity_type', type);
+
+  try {
+    const resp = await fetch(`${CLOUD_API.url}/watchlist?${params}`, {
+      headers: { 'X-API-Key': CLOUD_API.key },
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const json = await resp.json();
+    wlData = json.data || [];
+    renderWLTable(wlData);
+    updateWLStats(wlData);
+    document.getElementById('wl_count').textContent = `${wlData.length} entries`;
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="eico">✕</div>Cannot reach API — configure server URL on Dashboard</div></td></tr>`;
+    toast('Cannot load watchlist — check API config', 'error');
+  }
+}
+
+function renderWLTable(data) {
+  const tbody = document.getElementById('wl_tbody');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty"><div class="eico">🗄</div>No watchlist entries found</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(e => {
+    const tierClass = TIER_BADGE[e.risk_tier] || 'bn';
+    const codes = (e.reason_codes || []).slice(0,3)
+      .map(rc => `<span class="badge bn" style="font-size:.55rem;margin:.1rem">${rc}</span>`).join('');
+    const moreCount = (e.reason_codes||[]).length > 3 ? `<span class="mono" style="font-size:.6rem;color:var(--dim)">+${(e.reason_codes||[]).length-3}</span>` : '';
+    return `<tr>
+      <td><span class="badge ${tierClass} bd" style="font-size:.62rem">${e.risk_tier}</span></td>
+      <td><strong style="font-size:.82rem">${e.full_name}</strong></td>
+      <td><span class="mono" style="font-size:.68rem;color:var(--muted)">${e.entity_type}</span></td>
+      <td style="font-size:.75rem;color:var(--muted)">${e.nationality || '—'}</td>
+      <td class="mono" style="font-size:.65rem;color:var(--dim)">${e.id_number || '—'}</td>
+      <td>${codes}${moreCount}</td>
+      <td style="font-size:.72rem;color:var(--muted)">${e.source || '—'}</td>
+      <td class="mono" style="font-size:.62rem;color:var(--dim)">${fmtDate(e.listed_at)}</td>
+      <td><div style="display:flex;gap:.35rem">
+        <button class="btn btn-g btn-sm" onclick='openWLDetail(${JSON.stringify(e)})'>VIEW</button>
+        <button class="btn btn-r btn-sm" onclick="confirmDeactivate('${e.id}','${e.full_name}')">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function updateWLStats(data) {
+  document.getElementById('wl_stat_critical').textContent = data.filter(e=>e.risk_tier==='CRITICAL').length;
+  document.getElementById('wl_stat_high').textContent     = data.filter(e=>e.risk_tier==='HIGH').length;
+  document.getElementById('wl_stat_med').textContent      = data.filter(e=>e.risk_tier==='MEDIUM').length;
+  document.getElementById('wl_stat_total').textContent    = data.length;
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-SG', {day:'2-digit',month:'short',year:'numeric'});
+}
+
+function openWLDetail(entry) {
+  activeWLId = entry.id;
+  document.getElementById('wl_detail_title').textContent = `WATCHLIST — ${entry.full_name}`;
+  const tierColor = TIER_COLORS[entry.risk_tier] || 'var(--muted)';
+  const codes = (entry.reason_codes||[]).map(rc =>
+    `<span class="badge bn" style="margin:.15rem">${rc}</span>`).join('');
+  document.getElementById('wl_detail_body').innerHTML = `
+    <div style="padding:1rem;border:1px solid ${tierColor}40;background:${tierColor}08;margin-bottom:.9rem;display:flex;align-items:center;gap:.9rem;border-radius:2px">
+      <div style="font-size:2rem">${{CRITICAL:'🚨',HIGH:'🔴',MEDIUM:'🟡',LOW:'🟢'}[entry.risk_tier]}</div>
+      <div>
+        <div style="font-family:var(--font-mono);font-size:1rem;font-weight:600;color:${tierColor}">${entry.risk_tier} RISK — ${entry.full_name}</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:.2rem">${entry.entity_type} · ${entry.nationality||'—'} · Source: ${entry.source||'—'}</div>
+      </div>
+    </div>
+    <div class="dg" style="margin-bottom:.9rem">
+      <div class="df"><div class="dl">ID / NRIC / UEN</div><div class="dv mono">${entry.id_number||'—'}</div></div>
+      <div class="df"><div class="dl">Date Listed</div><div class="dv">${fmtDate(entry.listed_at)}</div></div>
+      <div class="df"><div class="dl">Active</div><div class="dv">${entry.is_active ? '<span style="color:var(--green)">Yes</span>' : '<span style="color:var(--red)">Deactivated</span>'}</div></div>
+      <div class="df"><div class="dl">Source</div><div class="dv">${entry.source||'—'}</div></div>
+    </div>
+    <div style="margin-bottom:.75rem">
+      <div class="dl" style="margin-bottom:.4rem">Reason Codes</div>
+      <div>${codes || '<span style="color:var(--muted);font-size:.75rem">None assigned</span>'}</div>
+    </div>
+    ${entry.reason_text ? `
+    <div class="card" style="margin-bottom:.75rem;padding:.85rem">
+      <div class="dl" style="margin-bottom:.4rem">Narrative</div>
+      <div style="font-size:.8rem;color:var(--text);line-height:1.65">${entry.reason_text}</div>
+    </div>` : ''}
+  `;
+  document.getElementById('modal_wl_detail').classList.add('active');
+}
+
+function confirmDeactivate(id, name) {
+  if (!confirm(`Deactivate watchlist entry for "${name}"?\n\nThe record will be preserved in the database but will no longer trigger matches.`)) return;
+  deactivateWLEntryById(id, name);
+}
+
+async function deactivateWLEntry() {
+  const entry = wlData.find(e => e.id === activeWLId);
+  if (!entry) return;
+  confirmDeactivate(activeWLId, entry.full_name);
+}
+
+async function deactivateWLEntryById(id, name) {
+  try {
+    const resp = await fetch(`${CLOUD_API.url}/watchlist/${id}`, {
+      method: 'DELETE',
+      headers: { 'X-API-Key': CLOUD_API.key },
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    toast(`Entry deactivated: ${name}`, 'info');
+    addAudit(`Watchlist entry deactivated: ${name} (${id})`);
+    closeModal('modal_wl_detail');
+    loadWatchlist();
+  } catch(e) {
+    toast(`Failed to deactivate: ${e.message}`, 'error');
+  }
+}
+
+// Live watchlist search with confidence scores
+function debounceWLSearch(val) {
+  clearTimeout(wlDebounce);
+  if (!val || val.length < 2) { document.getElementById('wl_search_results').innerHTML = ''; return; }
+  wlDebounce = setTimeout(() => runWLSearch(), 500);
+}
+
+async function runWLSearch() {
+  const q = document.getElementById('wl_search_input').value.trim();
+  if (!q || q.length < 2) { toast('Enter at least 2 characters', 'error'); return; }
+  const resultsDiv = document.getElementById('wl_search_results');
+  resultsDiv.innerHTML = `<div style="font-family:var(--font-mono);font-size:.65rem;color:var(--muted)">⏳ Searching watchlist…</div>`;
+
+  // Try cloud API first
+  try {
+    const resp = await fetch(`${CLOUD_API.url}/screen`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json','X-API-Key':CLOUD_API.key },
+      body: JSON.stringify({ name: q, entity_type: document.getElementById('wl_search_type').value || 'INDIVIDUAL' }),
+      signal: AbortSignal.timeout(10000)
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      const matches = data.db_matches || [];
+      if (!matches.length) {
+        resultsDiv.innerHTML = `<div class="match-card clear"><div class="match-name clear">✓ No watchlist matches found for "${q}"</div></div>`;
+        return;
+      }
+      resultsDiv.innerHTML = matches.map(m => {
+        const confColor = m.confidence==='HIGH'?'var(--red)':m.confidence==='MEDIUM'?'var(--amber)':'var(--muted)';
+        const tierColor = TIER_COLORS[m.risk_tier]||'var(--muted)';
+        return `<div class="match-card ${m.confidence==='HIGH'?'hit':'potential'}" style="margin-bottom:.4rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem">
+            <div class="match-name ${m.confidence==='HIGH'?'hit':'potential'}">${m.confidence==='HIGH'?'🚫':'⚠'} ${m.full_name}</div>
+            <span class="badge ${TIER_BADGE[m.risk_tier]||'bn'} bd" style="font-size:.6rem">${m.risk_tier}</span>
+          </div>
+          <div class="match-meta">
+            <span class="match-tag" style="color:${confColor}">Confidence: ${m.confidence} (${Math.round(m.similarity*100)}%)</span>
+            <span class="match-tag">Match on: ${m.match_source}</span>
+            <span class="match-tag">Matched: "${m.matched_value}"</span>
+            ${m.id_number?`<span class="match-tag">ID: ${m.id_number}</span>`:''}
+            ${(m.reason_codes||[]).slice(0,2).map(rc=>`<span class="match-tag" style="color:${tierColor}">${rc}</span>`).join('')}
+            ${m.is_exact?`<span class="match-tag" style="color:var(--red);border-color:var(--red)">EXACT MATCH</span>`:''}
+          </div>
+          ${m.reason_text?`<div style="font-size:.7rem;color:var(--muted);margin-top:.4rem;line-height:1.5">${m.reason_text.slice(0,140)}${m.reason_text.length>140?'…':''}</div>`:''}
+        </div>`;
+      }).join('');
+      return;
+    }
+  } catch(e) {}
+
+  // Fallback: client-side search on loaded data
+  if (wlData.length) {
+    const upper = q.toUpperCase();
+    const local = wlData.filter(e =>
+      e.full_name.toUpperCase().includes(upper) ||
+      (e.id_number && e.id_number.toUpperCase().includes(upper))
+    );
+    if (!local.length) {
+      resultsDiv.innerHTML = `<div class="match-card clear"><div class="match-name clear">✓ No local matches for "${q}"</div><div class="match-meta"><span class="match-tag">Searched ${wlData.length} loaded entries</span></div></div>`;
+    } else {
+      resultsDiv.innerHTML = local.map(e => `
+        <div class="match-card ${e.risk_tier==='HIGH'||e.risk_tier==='CRITICAL'?'hit':'potential'}" style="margin-bottom:.4rem">
+          <div class="match-name ${e.risk_tier==='HIGH'||e.risk_tier==='CRITICAL'?'hit':'potential'}">${e.full_name}</div>
+          <div class="match-meta">
+            <span class="match-tag" style="color:${TIER_COLORS[e.risk_tier]}">${e.risk_tier} RISK</span>
+            <span class="match-tag">${e.entity_type}</span>
+            ${(e.reason_codes||[]).slice(0,2).map(rc=>`<span class="match-tag">${rc}</span>`).join('')}
+          </div>
+        </div>`).join('');
+    }
+  } else {
+    resultsDiv.innerHTML = `<div style="font-family:var(--font-mono);font-size:.65rem;color:var(--amber)">⚠ API unreachable. Load watchlist first to search locally.</div>`;
+  }
+}
+
+// Wire watchlist into showView
+const _origRenders_wl = null;
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+updateBadges();
+renderDashboard();
+loadApiConfig();
+addAudit('System initialized — AML·CDD Platform v2.0 with live OFAC/UN/EU screening');
+</script>
+</body>
+</html>

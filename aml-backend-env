@@ -1,0 +1,12 @@
+# AML·CDD Backend — Environment Variables
+# Copy to .env and fill in before deploying
+
+# Your secret API key (generate: python -c "import secrets; print(secrets.token_hex(32))")
+API_KEY=aml-dev-key-change-in-production
+
+# Supabase — get from: Supabase Dashboard → Project Settings → API
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_SERVICE_KEY=eyJhbGciOi...   # Use service_role key (NOT anon key)
+
+# Port (Railway/Render set this automatically)
+PORT=8000
