@@ -13,9 +13,9 @@ Run locally:
   uvicorn main:app --reload --port 8000
 
 Environment variables (.env):
-  API_KEY=your-secret-api-key
+  API_KEY=sb_publishable_jY_PwfQzI7STN85k1ptKDA_I5eycB2o
   SUPABASE_URL=https://xxxx.supabase.co
-  SUPABASE_SERVICE_KEY=your-service-role-key
+  SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucmVybG5qY2ttcm9xY2tubWRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MTMwMzQsImV4cCI6MjA5NTE4OTAzNH0.-OHisYUeZ3YyRAAmxAgHkEoGMGVTxgrWzrtBpPPIXIw
   PORT=8000
 """
 
